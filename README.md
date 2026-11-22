@@ -19,7 +19,7 @@ Satu file `index.html` tanpa build, tanpa server, tanpa aplikasi berbayar. Data 
 | **Alerts** | Log sinyal baru, **Kirim sinyal tes** dan **Kirim pesan tes** ke Telegram, salin semua, auto-scan 1 jam / 4 jam |
 | **Config** | Semua parameter strategi, risiko, biaya, endpoint Binance, Telegram |
 
-Timeframe scan: **1h, 4h, 1d**. Bahasa: tombol **EN / ID** di header (pilihan tersimpan di browser, juga dipakai untuk pesan Telegram).
+Timeframe scan: **1H, 4H, 1D** (ditampilkan dengan huruf kapital). Bahasa: tombol **EN / ID** di header (pilihan tersimpan di browser, juga dipakai untuk pesan Telegram).
 
 ---
 
@@ -36,6 +36,8 @@ Setiap sinyal otomatis punya plan lengkap:
 | **TP3** | Sisa 34% trailing 3×ATR dari high (referensi 3R) | — (keluar juga jika RSI 2 > 70 atau setelah 10 bar) |
 | **Ukuran posisi** | Modal × risiko % ÷ (entry − SL), dibatasi alokasi maks per posisi | Sama |
 | **Berlaku** | 2 bar; batal jika close di bawah SL; jangan kejar di atas entry + 0,5×ATR | Sama |
+
+Persentase ditampilkan di kartu plan, papan sinyal, scanner, chart, dan Telegram: **Sekarang → Entry** (berapa % harga harus bergerak ke entry, diperbarui live), **Entry → SL**, dan **Entry → TP1/TP2/TP3**.
 
 Backtest memakai plan yang sama persis (scale-out di TP1/TP2, stop ke entry, trailing), jadi hasilnya mencerminkan cara plan dijalankan.
 
@@ -120,9 +122,9 @@ Setiap pair dicek juga di timeframe satu tingkat di atasnya:
 
 | Timeframe scan | Timeframe besar (HTF) |
 |---|---|
-| 1h | 4h |
-| 4h | 1d |
-| 1d | 1w |
+| 1H | 4H |
+| 4H | 1D |
+| 1D | 1W |
 
 - **HTF Bullish**: close di atas EMA 50 yang sedang naik. **Bearish**: close di bawah EMA 50 yang sedang turun. Selain itu **Netral**.
 - Hanya bar HTF yang **sudah close** yang dipakai, jadi tidak ada look-ahead.
@@ -180,7 +182,7 @@ Untuk update, upload ulang `index.html` di repo yang sama, lalu refresh browser 
 Contoh pesan (Bahasa Indonesia):
 ```
 🔵 TREND · BREAKOUT
-SOLUSDT · 4h · Skor 78/100
+SOLUSDT · 4H · Skor 78/100
 
 Entry: 145.20 (zona 144.53 – 145.20)
 Stop loss: 139.80 (-3.7%)
