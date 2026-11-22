@@ -114,6 +114,43 @@ Ini frekuensi masa lalu, **bukan jaminan**. Kondisi pasar bisa berubah.
 
 ---
 
+## Multi-timeframe (MTF)
+
+Setiap pair dicek juga di timeframe satu tingkat di atasnya:
+
+| Timeframe scan | Timeframe besar (HTF) |
+|---|---|
+| 1h | 4h |
+| 4h | 1d |
+| 1d | 1w |
+
+- **HTF Bullish**: close di atas EMA 50 yang sedang naik. **Bearish**: close di bawah EMA 50 yang sedang turun. Selain itu **Netral**.
+- Hanya bar HTF yang **sudah close** yang dipakai, jadi tidak ada look-ahead.
+- **Sinyal trend** wajib HTF Bullish. **Sinyal reversion** diblokir saat HTF Bearish.
+- Filter ini juga dipakai di backtest dan perhitungan probabilitas. Bisa dimatikan di Pengaturan → Regime router.
+- Status HTF tampil di papan sinyal, scanner, kartu plan, chart, dan Telegram.
+
+## SMC & price action di chart
+
+Layer bisa dinyalakan/dimatikan dengan tombol di bawah chart (**Struktur, Order block, FVG, Candle**):
+
+- **Struktur**: swing high/low (fractal 3 bar) diberi label **HH / HL / LH / LL**. Garis **BOS** (break searah trend) dan **CHoCH** (break berlawanan arah, garis putus-putus). Garis **EQ 50%** = equilibrium range swing terakhir (atas = premium, bawah = discount).
+- **Order block**: candle berlawanan terakhir sebelum BOS/CHoCH. Hanya OB yang belum ditembus close yang ditampilkan (hijau = bullish, merah = bearish).
+- **FVG**: celah 3 candle yang belum terisi.
+- **Candle**: **E** = engulfing, **P** = pin bar (hammer / shooting star). Hijau = bullish, merah = bearish. Hanya 12 bar terakhir.
+
+Kartu Trading Plan punya kotak **SMC & price action** berisi checklist konfluensi (x/6):
+1. HTF bullish
+2. Struktur pasar bullish
+3. Harga di area discount
+4. Di dalam atau dekat order block bullish
+5. Ada FVG bullish di bawah harga
+6. Ada pola candle bullish di 2 bar terakhir
+
+SMC & PA adalah **informasi konfluensi**, bukan syarat sinyal. Skor dan probabilitas tidak diubah oleh checklist ini.
+
+---
+
 ## Cara upload (GitHub Pages)
 
 1. Login ke GitHub, lalu **New repository**, misalnya `tradesys-dual`, set **Public**.

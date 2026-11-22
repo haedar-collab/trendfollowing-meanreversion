@@ -156,6 +156,14 @@ legend{font-weight:600;padding:0 6px}
 .cf.low,.cf.low_n{color:var(--mute)}
 .live{font-variant-numeric:tabular-nums}
 @media(max-width:1360px){#themeSeg span{display:none}#themeSeg svg{margin:0}}
+.lyr button{border-color:var(--rule);opacity:.55;display:inline-flex;gap:6px;align-items:center}
+.lyr button.on{opacity:1;border-color:var(--ink);background:var(--bg);color:var(--ink)}
+.lyr button i{display:inline-block;width:14px;height:3px}
+.ck{list-style:none;padding:0;margin:8px 0 0;font-size:13.5px}
+.ck li{padding:2px 0}
+.ck li.y{color:var(--tp)}
+.ck li.n{color:var(--mute)}
+.h1{color:var(--tp);font-weight:600}.h-1{color:var(--sl);font-weight:600}.h0{color:var(--warn);font-weight:600}.hna{color:var(--mute)}
 </style>
 </head>
 <body>
@@ -184,6 +192,7 @@ legend{font-weight:600;padding:0 6px}
     <div class="panel">
       <div class="chead"><b id="dSym">—</b><span id="dInfo" class="key"></span></div>
       <div class="fig" id="dFig"><svg></svg></div>
+      <div class="chips lyr" style="margin-top:8px"><button data-ly="smc"><i style="background:var(--tp)"></i><span data-i="ly_smc"></span></button><button data-ly="ob"><i style="background:var(--tp);opacity:.4;height:10px"></i><span data-i="ly_ob"></span></button><button data-ly="fvg"><i style="background:var(--tf);opacity:.4;height:10px"></i><span data-i="ly_fvg"></span></button><button data-ly="pa"><b style="color:var(--tp)">E</b><b style="color:var(--sl)">P</b> <span data-i="ly_pa"></span></button></div>
       <div class="key" style="margin-top:8px"><span><i style="background:var(--tf);opacity:.5"></i>EMA 20</span><span><i style="background:var(--tf)"></i>EMA 50</span><span><i style="background:var(--ink)"></i>EMA 200</span><span><i style="background:var(--mr);opacity:.5"></i>Bollinger 20,2</span><span><i style="background:var(--tp)"></i>TP</span><span><i style="background:var(--sl)"></i>SL</span><span><i style="background:var(--tf);height:8px;border-radius:2px"></i><span data-i="now_price"></span></span></div>
     </div>
     <div class="panel plan" id="planCard"></div>
@@ -213,6 +222,7 @@ legend{font-weight:600;padding:0 6px}
   <div class="panel">
     <div class="chead"><b id="cTitle">—</b><span id="cInfo" class="key"></span></div>
     <div class="fig" id="cFig" style="min-height:500px"><svg></svg></div>
+    <div class="chips lyr" style="margin-top:8px"><button data-ly="smc"><i style="background:var(--tp)"></i><span data-i="ly_smc"></span></button><button data-ly="ob"><i style="background:var(--tp);opacity:.4;height:10px"></i><span data-i="ly_ob"></span></button><button data-ly="fvg"><i style="background:var(--tf);opacity:.4;height:10px"></i><span data-i="ly_fvg"></span></button><button data-ly="pa"><b style="color:var(--tp)">E</b><b style="color:var(--sl)">P</b> <span data-i="ly_pa"></span></button></div>
   </div>
   <h3 style="margin-top:18px" data-i="hist"></h3>
   <div class="scroll"><table id="cHist"></table></div>
@@ -279,6 +289,7 @@ legend{font-weight:600;padding:0 6px}
       <label><span data-i="cf_adxTrend"></span><input id="k_adxTrend" type="number" step="1"></label>
       <label><span data-i="cf_adxRange"></span><input id="k_adxRange" type="number" step="1"></label>
       <label class="cb"><input id="k_btcBlock" type="checkbox"><span data-i="cf_btcBlock"></span></label>
+      <label class="cb"><input id="k_mtf" type="checkbox"><span data-i="cf_mtf"></span></label>
     </div></fieldset>
     <fieldset><legend>Trend following</legend><div class="form">
       <label><span data-i="cf_donchian"></span><input id="k_donchian" type="number"></label>
@@ -330,16 +341,17 @@ function evalAt(I,i,cfg,ctx){
  const up=c>e200&&e50>e200,dn=c<e200&&e50<e200;
  const regime=a>=cfg.adxTrend&&up?'Uptrend':a>=cfg.adxTrend&&dn?'Downtrend':a<=cfg.adxRange?'Range':'Transition';
  const ret20=i>=20?c/I.c[i-20]-1:0,rs=ret20-(ctx?ctx.btcRet20:0),z=I.sd[i]?(c-I.s20[i])/I.sd[i]:0;
- const out={regime,adx:a,z,rsi2:I.r2[i],rsi14:I.r14[i],rs,price:c,atr:at,sig:null,t:I.b[i].t};
+ const hs=I.htf?I.htf[i]:NaN,tfOk=!cfg.mtf||!(hs===0||hs===-1),mrOk=!cfg.mtf||hs!==-1;
+ const out={regime,adx:a,z,rsi2:I.r2[i],rsi14:I.r14[i],rs,price:c,atr:at,sig:null,t:I.b[i].t,htf:hs};
  const stack=e20>e50&&e50>e200&&c>e200;
- if(a>=cfg.adxTrend&&stack){
+ if(tfOk&&a>=cfg.adxTrend&&stack){
   const rising=a>I.dx[i-3],volOk=I.v[i]>=cfg.volMult*I.vs[i];let setup=null;
   if(c>I.dch[i]&&rising&&volOk)setup='Breakout';
   else if(I.l[i]<=e20*1.005&&c>e20&&I.r14[i]>=40&&I.r14[i]<=60&&c>I.o[i])setup='Pullback';
   if(setup){const riskOff=ctx&&!ctx.btcRiskOn;
    let sc=clamp((a-20)/20)*30+20+clamp(I.v[i]/I.vs[i]/3)*15+(ctx?clamp((rs+0.1)/0.2)*20:10)+15*(1-clamp(((c-e20)/at-1)/3));if(riskOff)sc-=15;
    if(!(riskOff&&cfg.btcBlock))out.sig={...tfPlan(setup,c,at,cfg),score:Math.round(clamp(sc,0,100)),riskOff:!!riskOff}}}
- if(!out.sig&&a<cfg.adxTrend&&(!cfg.mrRequireE200||c>e200)){
+ if(!out.sig&&mrOk&&a<cfg.adxTrend&&(!cfg.mrRequireE200||c>e200)){
   const r2=I.r2[i];
   if((z<=-cfg.mrZ||c<I.bbL[i])&&r2<=cfg.mrRsi2){const stop=c-cfg.mrAtr*at,tp2=I.s20[i],rr=(tp2-c)/(c-stop);
    if(rr>=cfg.minRR){const sc=clamp((-z-1.5)/1.5)*30+clamp((15-r2)/15)*25+clamp((30-a)/15)*15+(c>e200?15:0)+clamp(rr/2)*15,tp1=c+(tp2-c)/2;
@@ -374,6 +386,33 @@ function backtest(I,cfg,mode){
  let peak=0,dd=0;for(const p of curve){peak=Math.max(peak,p.eq);dd=Math.max(dd,1-p.eq/peak)}
  const w=trades.filter(t=>t.R>0),ls=trades.filter(t=>t.R<=0),gw=w.reduce((s,t)=>s+t.R,0),gl=-ls.reduce((s,t)=>s+t.R,0);
  return{trades,curve,stats:{n:trades.length,win:trades.length?w.length/trades.length:0,pf:gl?gw/gl:(gw?Infinity:0),avgR:trades.length?(gw-gl)/trades.length:0,ret:eq-1,dd,bh:curve.length?curve[curve.length-1].bh-1:0,exp:curve.length?inBars/curve.length:0,tf:trades.filter(t=>t.strat==='TF').length,mr:trades.filter(t=>t.strat==='MR').length}}}
+function htfStates(H){const c=H.map(x=>x.c),e=ema(c,50);return H.map((x,i)=>{if(i<5||isNaN(e[i])||isNaN(e[i-5]))return{ct:x.ct,s:NaN};const up=e[i]>e[i-5];return{ct:x.ct,s:c[i]>e[i]&&up?1:c[i]<e[i]&&!up?-1:0}})}
+function alignHtf(I,hs){const out=new Array(I.n).fill(NaN);let j=-1;for(let i=0;i<I.n;i++){const ct=I.b[i].ct;while(j+1<hs.length&&hs[j+1].ct<=ct)j++;out[i]=j>=0?hs[j].s:NaN}return out}
+function smc(I,k=3){const n=I.n,h=I.h,l=I.l,c=I.c,o=I.o,sw=[];
+ for(let i=k;i<n-k;i++){let ph=true,pl=true;for(let j=1;j<=k;j++){if(!(h[i]>h[i-j]&&h[i]>=h[i+j]))ph=false;if(!(l[i]<l[i-j]&&l[i]<=l[i+j]))pl=false}if(ph)sw.push({i,p:h[i],hi:true});if(pl)sw.push({i,p:l[i],hi:false})}
+ let pH=null,pL=null;for(const q of sw){if(q.hi){q.lb=pH?(q.p>pH.p?'HH':'LH'):'';pH=q}else{q.lb=pL?(q.p>pL.p?'HL':'LL'):'';pL=q}}
+ const ev=[],obs=[],fvg=[];let trend=0,lastH=null,lastL=null,si=0;
+ for(let i=0;i<n;i++){
+  while(si<sw.length&&sw[si].i+k<=i){const q=sw[si++];if(q.hi)lastH={...q,broken:false};else lastL={...q,broken:false}}
+  if(lastH&&!lastH.broken&&c[i]>lastH.p){ev.push({type:trend===-1?'CHoCH':'BOS',dir:1,from:lastH.i,to:i,p:lastH.p});trend=1;lastH.broken=true;for(let j=i;j>=lastH.i;j--)if(c[j]<o[j]){obs.push({dir:1,i:j,top:h[j],bot:l[j],dead:false,from:i});break}}
+  if(lastL&&!lastL.broken&&c[i]<lastL.p){ev.push({type:trend===1?'CHoCH':'BOS',dir:-1,from:lastL.i,to:i,p:lastL.p});trend=-1;lastL.broken=true;for(let j=i;j>=lastL.i;j--)if(c[j]>o[j]){obs.push({dir:-1,i:j,top:h[j],bot:l[j],dead:false,from:i});break}}
+  for(const ob of obs){if(ob.dead||i<=ob.from)continue;if(ob.dir===1&&c[i]<ob.bot)ob.dead=i;if(ob.dir===-1&&c[i]>ob.top)ob.dead=i}
+  for(const f of fvg){if(f.fill||i<=f.i+1)continue;if(f.dir===1&&l[i]<=f.bot)f.fill=i;if(f.dir===-1&&h[i]>=f.top)f.fill=i}
+  if(i>=2){if(l[i]>h[i-2])fvg.push({dir:1,i:i-1,top:l[i],bot:h[i-2],fill:false});if(h[i]<l[i-2])fvg.push({dir:-1,i:i-1,top:l[i-2],bot:h[i],fill:false})}}
+ const lh=[...sw].reverse().find(q=>q.hi),ll=[...sw].reverse().find(q=>!q.hi);
+ return{sw,ev,obs,fvg,trend,eq:lh&&ll?(lh.p+ll.p)/2:NaN}}
+function paAt(I,i){if(i<1)return null;const o=I.o[i],c=I.c[i],h=I.h[i],l=I.l[i],rg=h-l;if(!(rg>0))return null;const body=Math.abs(c-o),up=h-Math.max(o,c),dn=Math.min(o,c)-l,po=I.o[i-1],pc=I.c[i-1];
+ if(c>o&&pc<po&&c>=po&&o<=pc&&body>Math.abs(pc-po))return{k:'bull_engulf',d:1};
+ if(c<o&&pc>po&&c<=po&&o>=pc&&body>Math.abs(pc-po))return{k:'bear_engulf',d:-1};
+ if(dn>=2*body&&dn>=0.6*rg&&up<=0.25*rg)return{k:'hammer',d:1};
+ if(up>=2*body&&up>=0.6*rg&&dn<=0.25*rg)return{k:'shooting',d:-1};
+ if(h<I.h[i-1]&&l>I.l[i-1])return{k:'inside',d:0};
+ if(body<=0.1*rg)return{k:'doji',d:0};return null}
+function smcSummary(I){const Z=smc(I),n=I.n-1,p=I.c[n],at=I.at[n],lastEv=Z.ev[Z.ev.length-1]||null;
+ const ob=Z.obs.filter(o=>o.dir>0&&!o.dead&&o.bot<=p&&p-o.top<=5*at).sort((a,b)=>b.top-a.top)[0]||null;
+ const fvg=Z.fvg.filter(f=>f.dir>0&&!f.fill&&f.top<=p&&p-f.top<=5*at).sort((a,b)=>b.top-a.top)[0]||null;
+ let pa=null;for(let i=n;i>=n-1;i--){const q=paAt(I,i);if(q&&q.d!==0){pa=q;break}}
+ return{trend:Z.trend,lastEv:lastEv?{type:lastEv.type,dir:lastEv.dir,p:lastEv.p}:null,eq:Z.eq,zone:isFinite(Z.eq)?(p<Z.eq?'discount':'premium'):null,ob:ob?{top:ob.top,bot:ob.bot}:null,obNear:ob?p-ob.top<=at:false,fvg:fvg?{top:fvg.top,bot:fvg.bot}:null,fvgNear:fvg?p-fvg.top<=2*at:false,pa:pa||paAt(I,n)}}
 function wilson(k,n,z=1.96){if(!n)return 0;const p=k/n,d=1+z*z/n;return Math.max(0,(p+z*z/(2*n)-z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n)))/d)}
 function eventStats(I,cfg,strat){let n=0,h1=0,h2=0,sl=0,i=210;const maxB=strat==='TF'?60:cfg.mrMaxBars;
  while(i<I.n-2){const ev=evalAt(I,i,cfg,null);if(!ev||!ev.sig||ev.sig.strat!==strat){i++;continue}
@@ -390,9 +429,10 @@ function eventStats(I,cfg,strat){let n=0,h1=0,h2=0,sl=0,i=210;const maxB=strat==
 function probOf(st,src){const n=st.n,lb1=wilson(st.h1,n);return{n,src,p1:n?st.h1/n:0,p2:n?st.h2/n:0,psl:n?st.sl/n:0,lb1,grade:n<10?'low_n':lb1>=0.5?'high':lb1>=0.35?'med':'low'}}
 function rng(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
 function hashStr(str){let h=7;for(const ch of str)h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)+1}
-const TFMS={'1h':36e5,'4h':144e5,'1d':864e5};
+const TFMS={'1h':36e5,'4h':144e5,'1d':864e5,'1w':6048e5};
+const HTF={'1h':'4h','4h':'1d','1d':'1w'};
 const DEMO_BASE={BTCUSDT:60000,ETHUSDT:1700,SOLUSDT:140,BNBUSDT:560,XRPUSDT:0.55,ADAUSDT:0.38,AVAXUSDT:24,LINKUSDT:12,DOTUSDT:4.8,NEARUSDT:3.9,SUIUSDT:1.6,INJUSDT:16,ARBUSDT:0.6,OPUSDT:1.4,DOGEUSDT:0.11,TRXUSDT:0.16,LTCUSDT:68,ATOMUSDT:5.2,APTUSDT:6.5,FETUSDT:0.9};
-function demoBars(sym,tf,n,now){const r=rng(hashStr(sym+tf)),ms=TFMS[tf]||TFMS['4h'],sig=tf==='1d'?0.032:tf==='4h'?0.014:0.007;
+function demoBars(sym,tf,n,now){const r=rng(hashStr(sym+tf)),ms=TFMS[tf]||TFMS['4h'],sig=tf==='1w'?0.07:tf==='1d'?0.032:tf==='4h'?0.014:0.007;
  let p=DEMO_BASE[sym]||(0.5+r()*40),drift=0,left=0;const end=Math.floor(now/ms)*ms-ms,out=[];
  const gauss=()=>{const u=r()||1e-9,v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
  for(let k=n-1;k>=0;k--){if(left<=0){left=40+Math.floor(r()*120);const m=r();drift=m<0.4?sig*0.25:m<0.6?-sig*0.22:0}left--;
@@ -404,7 +444,11 @@ function demoBars(sym,tf,n,now){const r=rng(hashStr(sym+tf)),ms=TFMS[tf]||TFMS['
 
 /* ---------- language ---------- */
 const T={
-en:{upd:'updated',now:'Now',now_price:'Current price',last_close:'last close',vs_entry:'vs entry',st_inzone:'In entry zone',st_above:'Above entry, still valid',st_chase:"Too far above entry: don't chase",st_below:'Below entry zone, above SL',st_invalid:'Below stop loss: plan invalid',st_tp1:'TP1 already reached: skip',
+en:{htf:'HTF',bull:'Bullish',bear:'Bearish',neut:'Neutral',na:'n/a',smc_t:'SMC & price action',cf_t:'Confluence',discount:'Discount',premium:'Premium',none:'none',
+ ck_htf:tf=>`Higher timeframe (${tf}) bullish`,ck_struct:'Bullish market structure (last break up)',ck_zone:'Price in discount (below 50% of the swing range)',ck_ob:'At or near a bullish order block',ck_fvg:'Unfilled bullish FVG just below price',ck_pa:'Bullish candle pattern on the last 2 bars',
+ pa_bull_engulf:'Bullish engulfing',pa_bear_engulf:'Bearish engulfing',pa_hammer:'Hammer (bullish pin bar)',pa_shooting:'Shooting star (bearish pin bar)',pa_inside:'Inside bar',pa_doji:'Doji',
+ ly_smc:'Structure',ly_ob:'Order blocks',ly_fvg:'FVG',ly_pa:'Candles',cf_mtf:'Multi-timeframe filter: trend needs a bullish higher timeframe; reversion is blocked when it is bearish',
+ sm_struct:'Structure',sm_last:'Last break',sm_zone:'Zone',sm_pat:'Pattern',upd:'updated',now:'Now',now_price:'Current price',last_close:'last close',vs_entry:'vs entry',st_inzone:'In entry zone',st_above:'Above entry, still valid',st_chase:"Too far above entry: don't chase",st_below:'Below entry zone, above SL',st_invalid:'Below stop loss: plan invalid',st_tp1:'TP1 already reached: skip',
  conf:'Confidence',g_high:'High',g_med:'Medium',g_low:'Low',g_low_n:'Low (few samples)',p_sl:'SL first',prob_t:'Historical probability',
  prob_src_pair:(n,tf)=>`${n} past signals of this playbook on this pair, ${tf}`,prob_src_pool:n=>`${n} past signals of this playbook across signal pairs`,
  prob_note:'How often similar past signals reached each level before the stop. A frequency, not a guarantee.',conf_rule:lb=>`Confidence uses the conservative lower bound of TP1: ${lb}`,prob_na:'Not enough history yet',
@@ -424,7 +468,7 @@ en:{upd:'updated',now:'Now',now_price:'Current price',last_close:'last close',vs
  valid:(sl,mx)=>`Valid for 2 bars. Cancel if price closes below ${sl}, or don't chase above ${mx}.`,
  riskoff_flag:'BTC risk-off: consider half size.',send_tg:'Send to Telegram',copy_plan:'Copy plan',copied:'Copied',sent:'Sent',failed:'Failed',
  guide_t:'How the strategy works',
- guide_html:'<div class="gcols"><div><h3>Regime router</h3><ul><li>ADX ≥ 25, price and EMA 50 above EMA 200: <b>Uptrend</b> → trend playbook</li><li>ADX ≤ 20: <b>Range</b> → reversion playbook</li><li>Otherwise, or below EMA 200: stand aside</li><li>BTC below its daily EMA 200 flags trend longs as risk-off</li></ul></div><div><h3 style="color:var(--tf)">Trend following</h3><ul><li><b>Breakout:</b> close above the prior 20-bar high, EMA 20 &gt; 50 &gt; 200, ADX rising, volume ≥ 1.5× average</li><li><b>Pullback:</b> dip to EMA 20 that closes back above it, RSI 14 between 40 and 60</li><li>SL 2×ATR · TP1 1R · TP2 2R · TP3 trail 3×ATR (ref 3R)</li></ul></div><div><h3 style="color:var(--mr)">Mean reversion</h3><ul><li>Price above EMA 200, ADX below 25</li><li>Z-score ≤ −2 or close under the lower band, and RSI 2 ≤ 10</li><li>SL 1.5×ATR · TP1 halfway to the mean · TP2 the 20-bar mean · time stop 10 bars</li></ul></div></div>',
+ guide_html:'<div class="gcols"><div><h3>Regime router</h3><ul><li>ADX ≥ 25, price and EMA 50 above EMA 200: <b>Uptrend</b> → trend playbook</li><li>ADX ≤ 20: <b>Range</b> → reversion playbook</li><li>Otherwise, or below EMA 200: stand aside</li><li>BTC below its daily EMA 200 flags trend longs as risk-off</li></ul></div><div><h3 style="color:var(--tf)">Trend following</h3><ul><li><b>Breakout:</b> close above the prior 20-bar high, EMA 20 &gt; 50 &gt; 200, ADX rising, volume ≥ 1.5× average</li><li><b>Pullback:</b> dip to EMA 20 that closes back above it, RSI 14 between 40 and 60</li><li>SL 2×ATR · TP1 1R · TP2 2R · TP3 trail 3×ATR (ref 3R)</li></ul></div><div><h3 style="color:var(--mr)">Mean reversion</h3><ul><li>Price above EMA 200, ADX below 25</li><li>Z-score ≤ −2 or close under the lower band, and RSI 2 ≤ 10</li><li>SL 1.5×ATR · TP1 halfway to the mean · TP2 the 20-bar mean · time stop 10 bars</li></ul></div></div><p style="font-size:14px;margin-top:12px"><b>Multi-timeframe:</b> each pair is checked on the next timeframe up (1h→4h, 4h→1d, 1d→1w). Bullish = close above a rising EMA 50; bearish = below a falling one. Trend signals need a bullish HTF; reversion signals are blocked in a bearish HTF. Backtest and probabilities use the same filter.<br><b>SMC &amp; price action</b> (information, not a signal condition): swing structure HH/HL/LH/LL, BOS and CHoCH, unbroken order blocks, unfilled fair value gaps, the 50% equilibrium of the last swing range, and engulfing (E) and pin bar (P) candles.</p>',
  universe:'Universe',u_watch:'Watchlist',u_all:'All USDT pairs (top volume)',f_sig:'Signals',f_tf:'Trend',f_mr:'Reversion',f_all:'All pairs',plan_btn:'Plan',nomatch:'Nothing matches this filter.',
  snote:(n,tf)=>`${n} pairs · ${tf} · last closed bar`,skipped:'skipped',
  load:'Load',loading:'loading…',hist:'Recent signals',c_bar:'Bar',nohist:'No signals in the last 150 bars.',close:'Close',
@@ -447,7 +491,11 @@ en:{upd:'updated',now:'Now',now_price:'Current price',last_close:'last close',vs
  cf_donchian:'Breakout length (bars)',cf_volMult:'Volume multiple',cf_mrZ:'Z-score trigger (−)',cf_mrRsi2:'RSI 2 trigger (≤)',cf_mrMaxBars:'Time stop (bars)',cf_minRR:'Min reward:risk to TP2',cf_mrE200:'Only above EMA 200',
  cf_risk:'Risk and costs',cf_equity:'Equity (USDT)',cf_riskp:'Risk per trade %',cf_maxAlloc:'Max allocation per position %',cf_maxPos:'Max open positions',cf_maxHeat:'Max portfolio heat %',cf_fee:'Fee per side %',cf_slip:'Slippage per side %',
  save:'Save and rescan',reset:'Reset defaults',saved:'Saved.',restored:'Defaults restored; save to rescan.'},
-id:{upd:'update',now:'Sekarang',now_price:'Harga sekarang',last_close:'close terakhir',vs_entry:'vs entry',st_inzone:'Di zona entry',st_above:'Di atas entry, masih valid',st_chase:'Terlalu jauh di atas entry: jangan kejar',st_below:'Di bawah zona entry, masih di atas SL',st_invalid:'Di bawah stop loss: plan batal',st_tp1:'TP1 sudah tercapai: lewati',
+id:{htf:'HTF',bull:'Bullish',bear:'Bearish',neut:'Netral',na:'n/a',smc_t:'SMC & price action',cf_t:'Konfluensi',discount:'Discount',premium:'Premium',none:'tidak ada',
+ ck_htf:tf=>`Timeframe besar (${tf}) bullish`,ck_struct:'Struktur pasar bullish (break terakhir ke atas)',ck_zone:'Harga di area discount (di bawah 50% range swing)',ck_ob:'Di dalam atau dekat order block bullish',ck_fvg:'Ada FVG bullish belum terisi tepat di bawah harga',ck_pa:'Pola candle bullish di 2 bar terakhir',
+ pa_bull_engulf:'Bullish engulfing',pa_bear_engulf:'Bearish engulfing',pa_hammer:'Hammer (pin bar bullish)',pa_shooting:'Shooting star (pin bar bearish)',pa_inside:'Inside bar',pa_doji:'Doji',
+ ly_smc:'Struktur',ly_ob:'Order block',ly_fvg:'FVG',ly_pa:'Candle',cf_mtf:'Filter multi-timeframe: trend wajib timeframe besar bullish; reversion diblokir saat timeframe besar bearish',
+ sm_struct:'Struktur',sm_last:'Break terakhir',sm_zone:'Area',sm_pat:'Pola',upd:'update',now:'Sekarang',now_price:'Harga sekarang',last_close:'close terakhir',vs_entry:'vs entry',st_inzone:'Di zona entry',st_above:'Di atas entry, masih valid',st_chase:'Terlalu jauh di atas entry: jangan kejar',st_below:'Di bawah zona entry, masih di atas SL',st_invalid:'Di bawah stop loss: plan batal',st_tp1:'TP1 sudah tercapai: lewati',
  conf:'Keyakinan',g_high:'Tinggi',g_med:'Sedang',g_low:'Rendah',g_low_n:'Rendah (sampel sedikit)',p_sl:'SL duluan',prob_t:'Probabilitas historis',
  prob_src_pair:(n,tf)=>`${n} sinyal serupa di pair ini, ${tf}`,prob_src_pool:n=>`${n} sinyal serupa dari semua pair bersinyal`,
  prob_note:'Seberapa sering sinyal serupa di masa lalu mencapai level tersebut sebelum kena stop. Ini frekuensi, bukan jaminan.',conf_rule:lb=>`Keyakinan memakai batas bawah konservatif TP1: ${lb}`,prob_na:'Data historis belum cukup',
@@ -467,7 +515,7 @@ id:{upd:'update',now:'Sekarang',now_price:'Harga sekarang',last_close:'close ter
  valid:(sl,mx)=>`Berlaku 2 bar. Batal jika harga close di bawah ${sl}; jangan kejar di atas ${mx}.`,
  riskoff_flag:'BTC risk-off: pertimbangkan setengah ukuran.',send_tg:'Kirim ke Telegram',copy_plan:'Salin plan',copied:'Tersalin',sent:'Terkirim',failed:'Gagal',
  guide_t:'Cara kerja strategi',
- guide_html:'<div class="gcols"><div><h3>Regime router</h3><ul><li>ADX ≥ 25, harga dan EMA 50 di atas EMA 200: <b>Uptrend</b> → strategi trend</li><li>ADX ≤ 20: <b>Sideways</b> → strategi reversion</li><li>Selain itu, atau di bawah EMA 200: tunggu</li><li>BTC di bawah EMA 200 harian: long trend ditandai risk-off</li></ul></div><div><h3 style="color:var(--tf)">Trend following</h3><ul><li><b>Breakout:</b> close di atas high 20 bar sebelumnya, EMA 20 &gt; 50 &gt; 200, ADX naik, volume ≥ 1,5× rata-rata</li><li><b>Pullback:</b> turun ke EMA 20 lalu close kembali di atasnya, RSI 14 antara 40 dan 60</li><li>SL 2×ATR · TP1 1R · TP2 2R · TP3 trailing 3×ATR (ref 3R)</li></ul></div><div><h3 style="color:var(--mr)">Mean reversion</h3><ul><li>Harga di atas EMA 200, ADX di bawah 25</li><li>Z-score ≤ −2 atau close di bawah band bawah, dan RSI 2 ≤ 10</li><li>SL 1,5×ATR · TP1 setengah jalan ke rata-rata · TP2 rata-rata 20 bar · batas waktu 10 bar</li></ul></div></div>',
+ guide_html:'<div class="gcols"><div><h3>Regime router</h3><ul><li>ADX ≥ 25, harga dan EMA 50 di atas EMA 200: <b>Uptrend</b> → strategi trend</li><li>ADX ≤ 20: <b>Sideways</b> → strategi reversion</li><li>Selain itu, atau di bawah EMA 200: tunggu</li><li>BTC di bawah EMA 200 harian: long trend ditandai risk-off</li></ul></div><div><h3 style="color:var(--tf)">Trend following</h3><ul><li><b>Breakout:</b> close di atas high 20 bar sebelumnya, EMA 20 &gt; 50 &gt; 200, ADX naik, volume ≥ 1,5× rata-rata</li><li><b>Pullback:</b> turun ke EMA 20 lalu close kembali di atasnya, RSI 14 antara 40 dan 60</li><li>SL 2×ATR · TP1 1R · TP2 2R · TP3 trailing 3×ATR (ref 3R)</li></ul></div><div><h3 style="color:var(--mr)">Mean reversion</h3><ul><li>Harga di atas EMA 200, ADX di bawah 25</li><li>Z-score ≤ −2 atau close di bawah band bawah, dan RSI 2 ≤ 10</li><li>SL 1,5×ATR · TP1 setengah jalan ke rata-rata · TP2 rata-rata 20 bar · batas waktu 10 bar</li></ul></div></div><p style="font-size:14px;margin-top:12px"><b>Multi-timeframe:</b> tiap pair dicek di timeframe satu tingkat di atasnya (1h→4h, 4h→1d, 1d→1w). Bullish = close di atas EMA 50 yang naik; bearish = di bawah EMA 50 yang turun. Sinyal trend wajib HTF bullish; sinyal reversion diblokir saat HTF bearish. Backtest dan probabilitas memakai filter yang sama.<br><b>SMC &amp; price action</b> (informasi, bukan syarat sinyal): struktur swing HH/HL/LH/LL, BOS dan CHoCH, order block yang belum ditembus, fair value gap yang belum terisi, garis equilibrium 50% dari range swing terakhir, serta candle engulfing (E) dan pin bar (P).</p>',
  universe:'Cakupan',u_watch:'Watchlist',u_all:'Semua pair USDT (volume teratas)',f_sig:'Sinyal',f_tf:'Trend',f_mr:'Reversion',f_all:'Semua pair',plan_btn:'Plan',nomatch:'Tidak ada yang cocok dengan filter ini.',
  snote:(n,tf)=>`${n} pair · ${tf} · bar terakhir yang sudah close`,skipped:'dilewati',
  load:'Muat',loading:'memuat…',hist:'Sinyal terakhir',c_bar:'Bar',nohist:'Tidak ada sinyal dalam 150 bar terakhir.',close:'Close',
@@ -491,14 +539,15 @@ id:{upd:'update',now:'Sekarang',now_price:'Harga sekarang',last_close:'close ter
  cf_risk:'Risiko dan biaya',cf_equity:'Modal (USDT)',cf_riskp:'Risiko per trade %',cf_maxAlloc:'Alokasi maks per posisi %',cf_maxPos:'Maks posisi terbuka',cf_maxHeat:'Total risiko maks %',cf_fee:'Fee per sisi %',cf_slip:'Slippage per sisi %',
  save:'Simpan dan scan ulang',reset:'Kembalikan default',saved:'Tersimpan.',restored:'Default dipulihkan; simpan untuk scan ulang.'}};
 
-const DEF={tf:'4h',mode:'watch',watch:'BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,NEARUSDT,SUIUSDT,INJUSDT,ARBUSDT,OPUSDT,DOGEUSDT,TRXUSDT,LTCUSDT,ATOMUSDT,APTUSDT,FETUSDT',topN:40,minVol:5000000,adxTrend:25,adxRange:20,volMult:1.5,donchian:20,tfAtr:2,trailAtr:3,mrZ:2,mrRsi2:10,mrAtr:1.5,mrMaxBars:10,mrRequireE200:true,minRR:0.8,btcBlock:false,equity:10000,risk:1,maxAlloc:25,maxPos:5,maxHeat:6,fee:0.1,slip:0.05,auto:0,endpoint:'https://data-api.binance.vision',tgOn:false,tgToken:'',tgChat:''};
+const DEF={tf:'4h',mode:'watch',watch:'BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,NEARUSDT,SUIUSDT,INJUSDT,ARBUSDT,OPUSDT,DOGEUSDT,TRXUSDT,LTCUSDT,ATOMUSDT,APTUSDT,FETUSDT',topN:40,minVol:5000000,adxTrend:25,adxRange:20,volMult:1.5,donchian:20,tfAtr:2,trailAtr:3,mrZ:2,mrRsi2:10,mrAtr:1.5,mrMaxBars:10,mrRequireE200:true,mtf:true,minRR:0.8,btcBlock:false,equity:10000,risk:1,maxAlloc:25,maxPos:5,maxHeat:6,fee:0.1,slip:0.05,auto:0,endpoint:'https://data-api.binance.vision',tgOn:false,tgToken:'',tgChat:''};
 const LS={get(k,d){try{const v=localStorage.getItem('tsed_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('tsed_'+k,JSON.stringify(v))}catch(e){}}};
 let cfg={...DEF,...LS.get('cfg',{})};
 let lang=LS.get('lang','id');
 const t=(k,...a)=>{const v=(T[lang]&&T[lang][k]!==undefined)?T[lang][k]:T.en[k];return typeof v==='function'?v(...a):(v===undefined?k:v)};
 const S={results:[],cache:{},btc:null,filter:'sig',alerts:LS.get('alerts',[]),lastScan:0,busy:false,dSym:null,errs:[],scanTf:cfg.tf};
 let live=false,liveErr='';
-S.px={};S.pxAt=0;
+S.px={};S.pxAt=0;S.layers=LS.get('layers',{smc:true,ob:true,fvg:true,pa:true});
+function paintLayers(){for(const b of document.querySelectorAll('.lyr button'))b.classList.toggle('on',!!S.layers[b.dataset.ly])}
 const nowPx=sym=>{if(S.px[sym])return S.px[sym];const I=S.cache[sym+S.scanTf]||S.cache[sym+cfg.tf];return I?I.c[I.n-1]:NaN};
 async function refreshPrices(){if(!live||document.hidden)return;const syms=[...new Set(S.results.map(r=>r.sym).concat(['BTCUSDT',$('cSym').value.toUpperCase()]).filter(x=>/^[A-Z0-9]+USDT$/.test(x)))].slice(0,100);
  try{const a=await api('/api/v3/ticker/price',{symbols:JSON.stringify(syms)});if(Array.isArray(a)){for(const x of a)S.px[x.symbol]=+x.price;S.pxAt=Date.now();paintPrices()}}catch(e){}}
@@ -529,6 +578,8 @@ async function getKlines(sym,tf,n){
   out=bars.concat(out.filter(b=>b.t>bars[bars.length-1].t));end=bars[0].t-1;if(raw.length<lim)break}
  return out.filter(b=>b.ct<Date.now())}
 const STABLE=/^(USDC|FDUSD|TUSD|DAI|USDP|BUSD|EUR|AEUR|EURI|PYUSD|USD1|XUSD|USDE|BFUSD|GBP)USDT$/;
+async function attachHtf(I,sym,tf){const ht=HTF[tf];if(!ht)return I;const need=Math.min(1500,Math.ceil(I.n*TFMS[tf]/TFMS[ht])+80);
+ try{const hb=await getKlines(sym,ht,need);I.htf=alignHtf(I,htfStates(hb))}catch(e){I.htf=null}return I}
 async function universe(){
  if(cfg.mode!=='all')return cfg.watch.split(/[\s,]+/).map(s=>s.trim().toUpperCase()).filter(Boolean).map(s=>s.endsWith('USDT')?s:s+'USDT');
  if(!live)return Object.keys(DEMO_BASE);
@@ -546,7 +597,7 @@ function rungs(s){const e=s.entry,R=e-s.stop,rr=x=>((x-e)/R).toFixed(1)+'R';cons
  rows.push({c:'tp',lb:'TP1',px:s.tp1,ds:pct(s.tp1/e-1),nt:`${t('take')} ${s.alloc[0]}% · ${rr(s.tp1)} · ${t('move_be')}`});
  rows.push({c:'en',lb:'Entry',px:e,ds:'',nt:`${t('entry_zone')} ${fmtP(s.zoneLo)} – ${fmtP(e)}`});
  rows.push({c:'sl',lb:'Stop loss',px:s.stop,ds:pct(s.stop/e-1),nt:'−1R'});return rows}
-function planText(sym,tf,s,test,pr){const z=sizeFor(s),base=sym.replace('USDT','');const L=[];
+function planText(sym,tf,s,test,pr,ex){const z=sizeFor(s),base=sym.replace('USDT','');const L=[];
  if(test)L.push('⚠️ <b>'+t('tg_testline')+'</b>');
  L.push(`<b>${s.strat==='TF'?'🔵':'🟠'} ${esc(pbName(s).toUpperCase())}</b>`);
  L.push(`<b>${sym}</b> · ${tf} · ${t('tgl_score')} ${s.score}/100`);const np=nowPx(sym);if(isFinite(np)){const st=pstatus(s,np);L.push(`${t('tgl_now')}: <b>${fmtP(np)}</b> (${pct(np/s.entry-1,2)} ${t('vs_entry')})${st?' · '+t(st[1]):''}`)}L.push('');
@@ -558,6 +609,8 @@ function planText(sym,tf,s,test,pr){const z=sizeFor(s),base=sym.replace('USDT','
  L.push(`${t('rr2')}: ${s.rr.toFixed(2)}`);
  if(z)L.push(`${t('tgl_size')}: ${fmtQ(z.qty)} ${base} ≈ ${fmtU(z.val)} USDT · ${t('tgl_risk')} ${fmtU(z.risk)} USDT`);L.push('');
  L.push(`<b>${t('tgl_mgmt')}</b>`);t('mg_'+s.strat).forEach((m,i)=>L.push(`${i+1}. ${esc(m)}`));
+ if(ex&&ex.smc){const z=ex.smc,ck=confl(ex,tf);L.push('');L.push(`<b>MTF ${HTF[tf]||''}:</b> ${htfName(ex.htf)}`);L.push(`<b>SMC:</b> ${z.trend===1?t('bull'):z.trend===-1?t('bear'):t('neut')}${z.lastEv?' · '+z.lastEv.type+(z.lastEv.dir>0?' ↑':' ↓')+' '+fmtP(z.lastEv.p):''}${z.zone?' · '+t(z.zone):''}`);
+  if(z.ob)L.push(`OB: ${fmtP(z.ob.bot)} – ${fmtP(z.ob.top)}`);if(z.fvg)L.push(`FVG: ${fmtP(z.fvg.bot)} – ${fmtP(z.fvg.top)}`);L.push(`<b>PA:</b> ${z.pa?t('pa_'+z.pa.k):t('none')}`);L.push(`${t('cf_t')}: ${ck.filter(c=>c[1]).length}/${ck.length}`)}
  if(pr&&pr.n){L.push('');L.push(`<b>${t('tgl_prob')}</b> (n=${pr.n})`);L.push(`TP1 ${(pr.p1*100).toFixed(0)}% · TP2 ${(pr.p2*100).toFixed(0)}% · ${t('p_sl')} ${(pr.psl*100).toFixed(0)}%`);L.push(`${t('tgl_conf')}: ${t('g_'+pr.grade)}`)}
  if(s.riskOff)L.push('⚠️ '+t('riskoff_flag'));
  L.push('');L.push(`<i>${t('tgl_valid')}</i>`);
@@ -579,16 +632,16 @@ async function scan(){
   const ctx={btcRiskOn:S.btc.riskOn,btcRet20:S.btc.ret20};
   const syms=await universe();let done=0;const res=[];
   await pool(syms,4,async sym=>{const bars=sym==='BTCUSDT'?bt:await getKlines(sym,cfg.tf,300);if(bars.length<230)throw new Error('history');
-   const I=compute(bars,cfg),ev=evalAt(I,I.n-1,cfg,ctx);S.cache[sym+cfg.tf]=I;const back=cfg.tf==='1h'?24:cfg.tf==='4h'?6:1;
+   const I=compute(bars,cfg);await attachHtf(I,sym,cfg.tf);const ev=evalAt(I,I.n-1,cfg,ctx);S.cache[sym+cfg.tf]=I;if(ev)ev.smc=smcSummary(I);const back=cfg.tf==='1h'?24:cfg.tf==='4h'?6:1;
    if(ev)res.push({sym,...ev,chg:I.c[I.n-1]/I.c[Math.max(0,I.n-1-back)]-1});done++;prog.style.width=(4+96*done/syms.length)+'%'});
   const sigs=res.filter(r=>r.sig),per={},pooled={TF:{n:0,h1:0,h2:0,sl:0},MR:{n:0,h1:0,h2:0,sl:0}};
-  await pool(sigs,3,async r=>{const I1=compute(await getKlines(r.sym,cfg.tf,2000),cfg);const st=eventStats(I1,cfg,r.sig.strat);per[r.sym]=st;const P=pooled[r.sig.strat];for(const k in st)P[k]+=st[k]});
+  await pool(sigs,3,async r=>{const I1=compute(await getKlines(r.sym,cfg.tf,2000),cfg);await attachHtf(I1,r.sym,cfg.tf);const st=eventStats(I1,cfg,r.sig.strat);per[r.sym]=st;const P=pooled[r.sig.strat];for(const k in st)P[k]+=st[k]});
   for(const r of sigs){const st=per[r.sym];if(!st)continue;const P=pooled[r.sig.strat];r.prob=st.n>=15||P.n<=st.n?probOf(st,'pair'):probOf(P,'pool')}
   S.results=res.sort((a,b)=>(b.sig?b.sig.score+100:0)-(a.sig?a.sig.score+100:0)||b.adx-a.adx);S.lastScan=Date.now();S.scanTf=cfg.tf;
   const fresh=[];
-  for(const r of res)if(r.sig){const key=r.sym+'|'+r.sig.strat+'|'+r.t+'|'+cfg.tf;if(!S.alerts.some(a=>a.key===key)){const a={key,at:Date.now(),sym:r.sym,tf:cfg.tf,demo:!live,sig:r.sig,prob:r.prob||null};S.alerts.unshift(a);fresh.push(a)}}
+  for(const r of res)if(r.sig){const key=r.sym+'|'+r.sig.strat+'|'+r.t+'|'+cfg.tf;if(!S.alerts.some(a=>a.key===key)){const a={key,at:Date.now(),sym:r.sym,tf:cfg.tf,demo:!live,sig:r.sig,prob:r.prob||null,ex:{smc:r.smc,htf:r.htf,price:r.price,atr:r.atr}};S.alerts.unshift(a);fresh.push(a)}}
   S.alerts=S.alerts.filter(a=>a.sig).slice(0,200);LS.set('alerts',S.alerts);
-  if(live&&cfg.tgOn&&fresh.length)(async()=>{for(const a of fresh.slice(0,8)){try{await sendTg(planText(a.sym,a.tf,a.sig,false,a.prob))}catch(e){setStatus('Telegram: '+e.message);break}}})();
+  if(live&&cfg.tgOn&&fresh.length)(async()=>{for(const a of fresh.slice(0,8)){try{await sendTg(planText(a.sym,a.tf,a.sig,false,a.prob,a.ex))}catch(e){setStatus('Telegram: '+e.message);break}}})();
   const top=S.results.find(r=>r.sig);if(!S.dSym||!S.results.some(r=>r.sym===S.dSym&&r.sig))S.dSym=top?top.sym:'BTCUSDT';
   setStatus();renderAll();refreshPrices()
  }catch(e){setStatus(t('scan_failed')+': '+(e.message||e))}
@@ -597,7 +650,7 @@ async function scan(){
 /* ---------- chart ---------- */
 const figs=new Map();
 const ro=new ResizeObserver(es=>{for(const e of es){const d=figs.get(e.target);if(d)drawChart(e.target,d)}});
-function plot(el,data){figs.set(el,data);if(!el.dataset.obs){ro.observe(el);el.dataset.obs=1}drawChart(el,data)}
+function plot(el,data){if(data.I&&!data.smc)data.smc=smc(data.I);figs.set(el,data);if(!el.dataset.obs){ro.observe(el);el.dataset.obs=1}drawChart(el,data)}
 function drawChart(el,d){
  const s=el.querySelector('svg'),W=el.clientWidth,H=el.clientHeight;if(!W||!H||!d)return;
  if(d.kind==='eq')return drawEq(s,W,H,d);
@@ -606,11 +659,18 @@ function drawChart(el,d){
  const sg=d.sig,np=d.sym?nowPx(d.sym):NaN;if(sg){lo=Math.min(lo,sg.stop);hi=Math.max(hi,sg.tp3||sg.tp2)}if(isFinite(np)){lo=Math.min(lo,np);hi=Math.max(hi,np)}const pad=(hi-lo)*0.04;lo-=pad;hi+=pad;
  const cw=(W-L-R)/cnt,x=i=>L+(i-a0+0.5)*cw,y=p=>T0+(hi-p)/(hi-lo)*ph,bw=Math.max(1,cw*0.62);
  let g='';const step=(hi-lo)/4;
- for(let k=0;k<=4;k++){const p=lo+step*k,yy=y(p);g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--rule)"/>`;if(!sg)g+=`<text x="${W-R+6}" y="${yy+4}">${fmtP(p)}</text>`}
+ for(let k=0;k<=4;k++){const p=lo+step*k,yy=y(p);g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--rule)"/>`;if(!sg&&k>0)g+=`<text x="${W-R+6}" y="${yy+4}">${fmtP(p)}</text>`}
  const line=(arr,col,w,extra='')=>{let p='';for(let i=a0;i<I.n;i++){if(isNaN(arr[i]))continue;p+=(p?'L':'M')+x(i).toFixed(1)+','+y(arr[i]).toFixed(1)}return`<path d="${p}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`};
  g+=line(I.bbU,'var(--mr)',1,'opacity=".4"')+line(I.bbL,'var(--mr)',1,'opacity=".4"')+line(I.e20,'var(--tf)',1.2,'opacity=".5"')+line(I.e50,'var(--tf)',1.8)+line(I.e200,'var(--ink)',1.5,'stroke-dasharray="5 3"');
+ const Z=d.smc,LY=S.layers,xr=W-R;
+ if(Z&&LY.ob)for(const ob of Z.obs.filter(o=>!o.dead&&o.top>=lo&&o.bot<=hi).slice(-3)){const x1=Math.max(L,x(Math.max(ob.i,a0))-cw/2),col=ob.dir>0?'var(--tp)':'var(--sl)';g+=`<rect x="${x1}" y="${y(ob.top)}" width="${Math.max(0,xr-x1)}" height="${Math.max(1,y(ob.bot)-y(ob.top))}" fill="${col}" opacity=".13"/><text x="${x1+3}" y="${y(ob.top)+12}" style="fill:${col};font-weight:600">OB</text>`}
+ if(Z&&LY.fvg)for(const f of Z.fvg.filter(f=>!f.fill&&f.i>=a0&&f.top>=lo&&f.bot<=hi).slice(-3)){const x1=x(f.i)-cw/2,col=f.dir>0?'var(--tf)':'var(--mr)';g+=`<rect x="${x1}" y="${y(f.top)}" width="${Math.max(0,xr-x1)}" height="${Math.max(1,y(f.bot)-y(f.top))}" fill="${col}" opacity=".12"/><text x="${x1+3}" y="${(y(f.top)+y(f.bot))/2+4}" style="fill:${col}">FVG</text>`}
  for(let i=a0;i<I.n;i++){const up=I.c[i]>=I.o[i],xx=x(i),yo=y(I.o[i]),yc=y(I.c[i]);
   g+=`<line x1="${xx}" x2="${xx}" y1="${y(I.h[i])}" y2="${y(I.l[i])}" stroke="var(--ink)"/><rect x="${xx-bw/2}" y="${Math.min(yo,yc)}" width="${bw}" height="${Math.max(1,Math.abs(yc-yo))}" fill="${up?'var(--bg)':'var(--ink)'}" stroke="var(--ink)"/>`}
+ if(Z&&LY.smc){for(const e of Z.ev.filter(e=>e.to>=a0).slice(-4)){const x1=x(Math.max(e.from,a0)),x2=x(e.to),yy=y(e.p),col=e.dir>0?'var(--tp)':'var(--sl)';g+=`<line x1="${x1}" x2="${x2}" y1="${yy}" y2="${yy}" stroke="${col}" stroke-width="1.3" stroke-dasharray="${e.type==='CHoCH'?'5 3':''}"/><text x="${Math.max(L+24,(x1+x2)/2)}" y="${yy+(e.dir>0?-5:14)}" text-anchor="middle" style="fill:${col};font-weight:600">${e.type}</text>`}
+  for(const q of Z.sw.filter(q=>q.i>=a0&&q.lb).slice(-6))g+=`<text x="${x(q.i)}" y="${q.hi?y(q.p)-7:y(q.p)+17}" text-anchor="middle" style="font-weight:600">${q.lb}</text>`;
+  if(isFinite(Z.eq)&&Z.eq>lo&&Z.eq<hi)g+=`<line x1="${L}" x2="${xr}" y1="${y(Z.eq)}" y2="${y(Z.eq)}" stroke="var(--mute)" stroke-dasharray="8 4" opacity=".7"/><text x="${L+4}" y="${y(Z.eq)-4}">EQ 50%</text>`}
+ const mk=new Set((d.marks||[]).map(m=>m.i));if(LY.pa)for(let i=Math.max(a0,I.n-12,1);i<I.n;i++){const q=paAt(I,i);if(!q||!q.d||mk.has(i))continue;const lb=q.k.includes('engulf')?'E':'P';g+=q.d>0?`<text x="${x(i)}" y="${y(I.l[i])+30}" text-anchor="middle" style="fill:var(--tp);font-weight:700">${lb}</text>`:`<text x="${x(i)}" y="${y(I.h[i])-9}" text-anchor="middle" style="fill:var(--sl);font-weight:700">${lb}</text>`}
  if(d.marks)for(const m of d.marks){if(m.i<a0)continue;const xx=x(m.i),yy=y(I.l[m.i])+12;g+=m.strat==='TF'?`<path d="M${xx},${yy-5}l5,9h-10z" fill="var(--tf)"/>`:`<circle cx="${xx}" cy="${yy}" r="4.5" fill="var(--mr)"/>`}
  const lv=[];if(sg){lv.push([sg.stop,'SL','var(--sl)'],[sg.entry,'Entry','var(--ink)'],[sg.tp1,'TP1','var(--tp)'],[sg.tp2,'TP2','var(--tp)']);if(sg.tp3)lv.push([sg.tp3,'TP3','var(--tp)'])}
  if(isFinite(np)){g+=`<line x1="${L}" x2="${W-R}" y1="${y(np)}" y2="${y(np)}" stroke="var(--tf)" stroke-dasharray="1 3" stroke-width="1.4"/>`;lv.push([np,'NOW','var(--tf)'])}
@@ -651,41 +711,48 @@ function renderDash(){
  $('kpis').innerHTML=(b?kpi('BTC',`<span data-px="BTCUSDT">${fmtP(nowPx('BTCUSDT'))}</span>`,pct(b.chg,2)+' '+t('d1'))+kpi(t('k_btcd'),b.riskOn?t('riskon'):t('riskoff'),'ADX '+b.adx.toFixed(1),b.riskOn?'var(--tp)':'var(--sl)'):'')+
   kpi(t('k_tf'),tf,t('su_Breakout')+' + '+t('su_Pullback'),'var(--tf)')+kpi(t('k_mr'),mr,'Z-score + Bollinger','var(--mr)')+
   `<div class="kpi"><small>${t('k_mix')} · ${r.length} ${t('pairs')}</small><div class="mix">${mix.map(([k,c])=>`<i style="width:${cnt(k)/tot*100}%;background:${c}"></i>`).join('')}</div><small>${mix.filter(([k])=>cnt(k)).map(([k])=>t('rg_'+k)+' '+cnt(k)).join(' · ')}</small></div>`;
- $('board').innerHTML=`<thead><tr><th>${t('c_pair')}</th><th>${t('c_playbook')}</th><th class="n">${t('c_score')}</th><th>${t('conf')}</th><th class="n">P(TP1)</th><th class="n">${t('now')}</th><th class="n">Entry</th><th class="n">SL</th><th class="n">TP1</th><th class="n">TP2</th><th class="n">R:R</th></tr></thead><tbody>`+
-  (sig.length?sig.map(x=>`<tr class="click${x.sym===S.dSym?' sel':''}" data-sym="${x.sym}"><td><b>${x.sym.replace('USDT','')}</b></td><td><span class="pill ${x.sig.strat}">${pbName(x.sig)}</span></td><td class="n"><b>${x.sig.score}</b></td><td>${x.prob?`<span class="cf ${x.prob.grade}">${t('g_'+x.prob.grade)}</span>`:'—'}</td><td class="n">${x.prob&&x.prob.n?(x.prob.p1*100).toFixed(0)+'%':'—'}</td><td class="n live" data-px="${x.sym}">${fmtP(nowPx(x.sym))}</td><td class="n">${fmtP(x.sig.entry)}</td><td class="n sl">${fmtP(x.sig.stop)}</td><td class="n tp">${fmtP(x.sig.tp1)}</td><td class="n tp">${fmtP(x.sig.tp2)}</td><td class="n">${x.sig.rr.toFixed(2)}</td></tr>`).join(''):`<tr><td colspan="11"><div class="empty">${t('empty_board')}</div></td></tr>`)+'</tbody>';
+ $('board').innerHTML=`<thead><tr><th>${t('c_pair')}</th><th>${t('c_playbook')}</th><th class="n">${t('c_score')}</th><th>${t('htf')}</th><th>${t('conf')}</th><th class="n">P(TP1)</th><th class="n">${t('now')}</th><th class="n">Entry</th><th class="n">SL</th><th class="n">TP1</th><th class="n">TP2</th><th class="n">R:R</th></tr></thead><tbody>`+
+  (sig.length?sig.map(x=>`<tr class="click${x.sym===S.dSym?' sel':''}" data-sym="${x.sym}"><td><b>${x.sym.replace('USDT','')}</b></td><td><span class="pill ${x.sig.strat}">${pbName(x.sig)}</span></td><td class="n"><b>${x.sig.score}</b></td><td>${htfCell(x.htf)}</td><td>${x.prob?`<span class="cf ${x.prob.grade}">${t('g_'+x.prob.grade)}</span>`:'—'}</td><td class="n">${x.prob&&x.prob.n?(x.prob.p1*100).toFixed(0)+'%':'—'}</td><td class="n live" data-px="${x.sym}">${fmtP(nowPx(x.sym))}</td><td class="n">${fmtP(x.sig.entry)}</td><td class="n sl">${fmtP(x.sig.stop)}</td><td class="n tp">${fmtP(x.sig.tp1)}</td><td class="n tp">${fmtP(x.sig.tp2)}</td><td class="n">${x.sig.rr.toFixed(2)}</td></tr>`).join(''):`<tr><td colspan="12"><div class="empty">${t('empty_board')}</div></td></tr>`)+'</tbody>';
  showDash(S.dSym)}
 function showDash(sym){const I=S.cache[sym+S.scanTf];if(!I)return;S.dSym=sym;const r=S.results.find(x=>x.sym===sym);
  for(const tr of document.querySelectorAll('#board tr[data-sym]'))tr.classList.toggle('sel',tr.dataset.sym===sym);
- $('dSym').textContent=sym+' · '+S.scanTf;$('dInfo').innerHTML=`<span>${t('now')} <b class="live" data-px="${sym}">${fmtP(nowPx(sym))}</b></span>`+(r?`<span class="pill ${r.regime}">${t('rg_'+r.regime)}</span><span>ADX ${r.adx.toFixed(1)}</span><span>Z ${r.z.toFixed(2)}</span><span>RSI 2 ${r.rsi2.toFixed(0)}</span><span>RS ${pct(r.rs)}</span>`:'');
+ $('dSym').textContent=sym+' · '+S.scanTf;$('dInfo').innerHTML=`<span>${t('now')} <b class="live" data-px="${sym}">${fmtP(nowPx(sym))}</b></span>`+(r?`<span class="pill ${r.regime}">${t('rg_'+r.regime)}</span><span>ADX ${r.adx.toFixed(1)}</span><span>Z ${r.z.toFixed(2)}</span><span>RSI 2 ${r.rsi2.toFixed(0)}</span><span>RS ${pct(r.rs)}</span><span>${t('htf')} ${HTF[S.scanTf]||''} ${htfCell(r.htf)}</span>${r.smc?`<span>SMC ${r.smc.trend===1?t('bull'):r.smc.trend===-1?t('bear'):t('neut')}${r.smc.lastEv?' · '+r.smc.lastEv.type+(r.smc.lastEv.dir>0?'↑':'↓'):''}</span>`:''}`:'');
  plot($('dFig'),{I,sym,sig:r&&r.sig,marks:marksFor(I,I.n-150)});renderPlan(r)}
+function htfName(v){return v===1?t('bull'):v===-1?t('bear'):v===0?t('neut'):t('na')}
+const htfCell=v=>`<span class="${v===1?'h1':v===-1?'h-1':v===0?'h0':'hna'}">${htfName(v)}</span>`;
+function confl(r,tf){const z=r.smc,p=r.price;return[[t('ck_htf',HTF[tf]||''),r.htf===1],[t('ck_struct'),z.trend===1],[t('ck_zone'),z.zone==='discount'],[t('ck_ob'),!!z.obNear],[t('ck_fvg'),!!z.fvgNear],[t('ck_pa'),!!(z.pa&&z.pa.d>0)]]}
+function smcBlock(r){const z=r.smc;if(!z)return'';const ck=confl(r,S.scanTf),yes=ck.filter(c=>c[1]).length;
+ const det=[`${t('sm_struct')}: ${z.trend===1?t('bull'):z.trend===-1?t('bear'):t('neut')}`,z.lastEv?`${t('sm_last')}: ${z.lastEv.type} ${z.lastEv.dir>0?'↑':'↓'} ${fmtP(z.lastEv.p)}`:'',z.zone?`${t('sm_zone')}: ${t(z.zone)} (EQ ${fmtP(z.eq)})`:'',z.ob?`OB ${fmtP(z.ob.bot)} – ${fmtP(z.ob.top)}`:'',z.fvg?`FVG ${fmtP(z.fvg.bot)} – ${fmtP(z.fvg.top)}`:'',`${t('sm_pat')}: ${z.pa?t('pa_'+z.pa.k):t('none')}`].filter(Boolean).join(' · ');
+ return`<div class="prob"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b style="font-size:14px">${t('smc_t')}</b><span>${t('cf_t')}: <b>${yes}/${ck.length}</b></span></div><ul class="ck">${ck.map(([lb,ok])=>`<li class="${ok?'y':'n'}">${ok?'✓':'–'} ${lb}</li>`).join('')}</ul><p class="note" style="margin:6px 0 0">${det}</p></div>`}
 function probBlock(pr){if(!pr||!pr.n)return`<div class="prob"><small style="color:var(--mute)">${t('prob_t')}: ${t('prob_na')}</small></div>`;
  const row=(lb,v,c)=>`<div class="pr"><span>${lb}</span><div class="pb"><i style="width:${(v*100).toFixed(0)}%;background:${c}"></i></div><span>${(v*100).toFixed(0)}%</span></div>`;
  return`<div class="prob"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b style="font-size:14px">${t('prob_t')}</b><span>${t('conf')}: <span class="cf ${pr.grade}">${t('g_'+pr.grade)}</span></span></div>${row('TP1',pr.p1,'var(--tp)')}${row('TP2',pr.p2,'var(--tp)')}${row(t('p_sl'),pr.psl,'var(--sl)')}<p class="note" style="margin:8px 0 0">${pr.src==='pair'?t('prob_src_pair',pr.n,S.scanTf):t('prob_src_pool',pr.n)}. ${t('prob_note')} ${t('conf_rule',(pr.lb1*100).toFixed(0)+'%')}.</p></div>`}
 function renderPlan(r){const el=$('planCard');
  if(!r||!r.sig){el.innerHTML=`<h3>${t('plan')}</h3><div class="empty">${t('noplan')}</div>`;return}
  const s=r.sig,z=sizeFor(s),base=r.sym.replace('USDT','');
- el.innerHTML=`<div class="ph"><div><span class="pill ${s.strat}">${pbName(s)}</span><b style="margin-top:6px">${r.sym} · ${S.scanTf}</b></div><div class="score">${t('c_score')}<br><b>${s.score}</b><span>/100</span></div></div>
+ el.innerHTML=`<div class="ph"><div><span class="pill ${s.strat}">${pbName(s)}</span><b style="margin-top:6px">${r.sym} · ${S.scanTf}</b></div><div class="score">${t('htf')} ${HTF[S.scanTf]||''}: ${htfCell(r.htf)}<br>${t('c_score')}<br><b>${s.score}</b><span>/100</span></div></div>
  <div class="nowrow"><div><small>${t('now_price')} · <span id="pxAge">${live&&S.pxAt?t('upd')+' '+tstr(S.pxAt).split(', ').pop():t('last_close')}</span></small><br><b class="live" data-px="${r.sym}">${fmtP(nowPx(r.sym))}</b> <small data-pxv="${r.sym}" data-ref="${s.entry}">${pct(nowPx(r.sym)/s.entry-1,2)}</small> <small>${t('vs_entry')}</small></div><span class="stt" data-pst="${r.sym}"></span></div>
  <div class="ladder">${rungs(s).map(w=>`<div class="rung ${w.c}"><span class="lb">${w.lb}</span><span class="px">${fmtP(w.px)}</span><span class="ds">${w.ds}</span><span class="nt">${w.nt}</span></div>`).join('')}</div>
  ${z?`<div class="psize"><div>${t('sz')}<b>${fmtQ(z.qty)} ${base}</b></div><div>${t('val')}<b>${fmtU(z.val)} $</b></div><div>${t('rk')}<b>${fmtU(z.risk)} $</b></div></div>`:''}
+ ${smcBlock(r)}
  ${probBlock(r.prob)}
  <ol>${t('mg_'+s.strat).map(m=>`<li>${m}</li>`).join('')}</ol>
  ${s.riskOff?`<p class="warnbox" style="margin:6px 0">${t('riskoff_flag')}</p>`:''}
  <p class="valid">${t('valid',fmtP(s.stop),fmtP(s.maxChase))} · ${t('rr2')} ${s.rr.toFixed(2)}</p>
  <div class="acts"><button class="pri" id="pSend">${t('send_tg')}</button><button id="pCopy">${t('copy_plan')}</button></div>`;paintPrices();
- $('pSend').onclick=async e=>{const btn=e.currentTarget;try{await sendTg(planText(r.sym,S.scanTf,s,!live,r.prob));flash(btn,t('sent'))}catch(err){flash(btn,t('failed')+': '+err.message,4000)}};
- $('pCopy').onclick=async e=>{const btn=e.currentTarget;try{await navigator.clipboard.writeText(plainText(planText(r.sym,S.scanTf,s,!live,r.prob)));flash(btn,t('copied'))}catch(err){flash(btn,t('failed'))}}}
+ $('pSend').onclick=async e=>{const btn=e.currentTarget;try{await sendTg(planText(r.sym,S.scanTf,s,!live,r.prob,r));flash(btn,t('sent'))}catch(err){flash(btn,t('failed')+': '+err.message,4000)}};
+ $('pCopy').onclick=async e=>{const btn=e.currentTarget;try{await navigator.clipboard.writeText(plainText(planText(r.sym,S.scanTf,s,!live,r.prob,r)));flash(btn,t('copied'))}catch(err){flash(btn,t('failed'))}}}
 function renderScanner(){
  const f=S.filter,rows=S.results.filter(r=>f==='all'||(f==='sig'?r.sig:r.sig&&r.sig.strat===f));
- $('sTable').innerHTML=`<thead><tr><th>${t('c_pair')}</th><th class="n">${t('c_price')}</th><th class="n">${t('c_chg')}</th><th>${t('c_regime')}</th><th>${t('c_signal')}</th><th class="n">${t('c_score')}</th><th class="n">P(TP1)</th><th class="n">Entry</th><th class="n">SL</th><th class="n">TP1</th><th class="n">TP2</th><th class="n">ADX</th><th class="n">${t('c_rs')}</th><th></th></tr></thead><tbody>`+
- (rows.length?rows.map(r=>`<tr class="click" data-sym="${r.sym}"><td><b>${r.sym.replace('USDT','')}</b></td><td class="n live" data-px="${r.sym}">${fmtP(nowPx(r.sym))}</td><td class="n">${pct(r.chg)}</td><td><span class="pill ${r.regime}">${t('rg_'+r.regime)}</span></td><td>${r.sig?`<span class="pill ${r.sig.strat}">${pbName(r.sig)}</span>`:'—'}</td><td class="n">${r.sig?'<b>'+r.sig.score+'</b>':''}</td><td class="n">${r.prob&&r.prob.n?`<span class="cf ${r.prob.grade}">${(r.prob.p1*100).toFixed(0)}%</span>`:''}</td><td class="n">${r.sig?fmtP(r.sig.entry):''}</td><td class="n sl">${r.sig?fmtP(r.sig.stop):''}</td><td class="n tp">${r.sig?fmtP(r.sig.tp1):''}</td><td class="n tp">${r.sig?fmtP(r.sig.tp2):''}</td><td class="n">${r.adx.toFixed(1)}</td><td class="n">${pct(r.rs)}</td><td>${r.sig?`<button class="sm" data-plan="${r.sym}">${t('plan_btn')}</button>`:''}</td></tr>`).join(''):`<tr><td colspan="14"><div class="empty">${t('nomatch')}</div></td></tr>`)+'</tbody>';
+ $('sTable').innerHTML=`<thead><tr><th>${t('c_pair')}</th><th class="n">${t('c_price')}</th><th class="n">${t('c_chg')}</th><th>${t('c_regime')}</th><th>${t('htf')}</th><th>${t('c_signal')}</th><th class="n">${t('c_score')}</th><th class="n">P(TP1)</th><th class="n">Entry</th><th class="n">SL</th><th class="n">TP1</th><th class="n">TP2</th><th class="n">ADX</th><th class="n">${t('c_rs')}</th><th></th></tr></thead><tbody>`+
+ (rows.length?rows.map(r=>`<tr class="click" data-sym="${r.sym}"><td><b>${r.sym.replace('USDT','')}</b></td><td class="n live" data-px="${r.sym}">${fmtP(nowPx(r.sym))}</td><td class="n">${pct(r.chg)}</td><td><span class="pill ${r.regime}">${t('rg_'+r.regime)}</span></td><td>${htfCell(r.htf)}</td><td>${r.sig?`<span class="pill ${r.sig.strat}">${pbName(r.sig)}</span>`:'—'}</td><td class="n">${r.sig?'<b>'+r.sig.score+'</b>':''}</td><td class="n">${r.prob&&r.prob.n?`<span class="cf ${r.prob.grade}">${(r.prob.p1*100).toFixed(0)}%</span>`:''}</td><td class="n">${r.sig?fmtP(r.sig.entry):''}</td><td class="n sl">${r.sig?fmtP(r.sig.stop):''}</td><td class="n tp">${r.sig?fmtP(r.sig.tp1):''}</td><td class="n tp">${r.sig?fmtP(r.sig.tp2):''}</td><td class="n">${r.adx.toFixed(1)}</td><td class="n">${pct(r.rs)}</td><td>${r.sig?`<button class="sm" data-plan="${r.sym}">${t('plan_btn')}</button>`:''}</td></tr>`).join(''):`<tr><td colspan="15"><div class="empty">${t('nomatch')}</div></td></tr>`)+'</tbody>';
  $('sNote').textContent=t('snote',S.results.length,S.scanTf)+(S.errs.length?' · '+t('skipped')+': '+S.errs.slice(0,5).join('; '):'')}
 async function loadChart(){
  let sym=$('cSym').value.trim().toUpperCase();if(!sym.endsWith('USDT'))sym+='USDT';const tf=$('cTf').value;$('cSym').value=sym;$('cTitle').textContent=sym+' · '+tf+' · '+t('loading');
- try{const I=S.cache[sym+tf]&&S.cache[sym+tf].n>=500?S.cache[sym+tf]:compute(await getKlines(sym,tf,600),cfg);S.cache[sym+tf]=I;
+ try{let I=S.cache[sym+tf]&&S.cache[sym+tf].n>=500?S.cache[sym+tf]:null;if(!I){I=compute(await getKlines(sym,tf,600),cfg);await attachHtf(I,sym,tf)}S.cache[sym+tf]=I;const zs=smcSummary(I);
   const ev=evalAt(I,I.n-1,cfg,S.btc?{btcRiskOn:S.btc.riskOn,btcRet20:S.btc.ret20}:null),m=marksFor(I,I.n-150);
   const cp=ev&&ev.sig?probOf(eventStats(I,cfg,ev.sig.strat),'pair'):null;if(live&&!S.px[sym])api('/api/v3/ticker/price',{symbol:sym}).then(a=>{if(a&&a.price){S.px[sym]=+a.price;paintPrices()}}).catch(()=>{});
-  $('cTitle').textContent=sym+' · '+tf;$('cInfo').innerHTML=ev?`<span>${t('now')} <b class="live" data-px="${sym}">${fmtP(nowPx(sym))}</b></span><span class="pill ${ev.regime}">${t('rg_'+ev.regime)}</span>${ev.sig?`<span class="pill ${ev.sig.strat}">${pbName(ev.sig)}</span><span>${t('conf')} <span class="cf ${cp.grade}">${t('g_'+cp.grade)}</span>${cp.n?' · TP1 '+(cp.p1*100).toFixed(0)+'% (n='+cp.n+')':''}</span>`:''}<span>${t('close')} ${fmtP(ev.price)}</span><span>ADX ${ev.adx.toFixed(1)}</span><span>RSI 14 ${ev.rsi14.toFixed(0)}</span><span>Z ${ev.z.toFixed(2)}</span><span>ATR ${fmtP(ev.atr)}</span>`:'';
+  $('cTitle').textContent=sym+' · '+tf;$('cInfo').innerHTML=ev?`<span>${t('now')} <b class="live" data-px="${sym}">${fmtP(nowPx(sym))}</b></span><span class="pill ${ev.regime}">${t('rg_'+ev.regime)}</span>${ev.sig?`<span class="pill ${ev.sig.strat}">${pbName(ev.sig)}</span><span>${t('conf')} <span class="cf ${cp.grade}">${t('g_'+cp.grade)}</span>${cp.n?' · TP1 '+(cp.p1*100).toFixed(0)+'% (n='+cp.n+')':''}</span>`:''}<span>${t('htf')} ${HTF[tf]||''} ${htfCell(ev.htf)}</span><span>SMC ${zs.trend===1?t('bull'):zs.trend===-1?t('bear'):t('neut')}${zs.lastEv?' · '+zs.lastEv.type+(zs.lastEv.dir>0?'↑':'↓'):''}${zs.zone?' · '+t(zs.zone):''}</span>${zs.pa?`<span>${t('pa_'+zs.pa.k)}</span>`:''}<span>${t('close')} ${fmtP(ev.price)}</span><span>ADX ${ev.adx.toFixed(1)}</span><span>RSI 14 ${ev.rsi14.toFixed(0)}</span><span>Z ${ev.z.toFixed(2)}</span><span>ATR ${fmtP(ev.atr)}</span>`:'';
   plot($('cFig'),{I,sym,sig:ev&&ev.sig,marks:m});
   $('cHist').innerHTML=`<thead><tr><th>${t('c_bar')}</th><th>${t('c_signal')}</th><th>${t('c_regime')}</th><th class="n">${t('c_score')}</th><th class="n">Entry</th><th class="n">SL</th><th class="n">TP1</th><th class="n">TP2</th></tr></thead><tbody>`+(m.length?m.slice().reverse().slice(0,15).map(x=>`<tr><td>${tstr(x.t)}</td><td><span class="pill ${x.strat}">${pbName(x.sig)}</span></td><td>${t('rg_'+x.regime)}</td><td class="n">${x.sig.score}</td><td class="n">${fmtP(x.sig.entry)}</td><td class="n sl">${fmtP(x.sig.stop)}</td><td class="n tp">${fmtP(x.sig.tp1)}</td><td class="n tp">${fmtP(x.sig.tp2)}</td></tr>`).join(''):`<tr><td colspan="8"><div class="empty">${t('nohist')}</div></td></tr>`)+'</tbody>'
  }catch(e){$('cTitle').textContent=sym+' · '+(e.message||'error')}}
@@ -693,7 +760,7 @@ let lastBt=null;
 async function runBt(){
  let sym=$('bSym').value.trim().toUpperCase();if(!sym.endsWith('USDT'))sym+='USDT';const tf=$('bTf').value,n=+$('bN').value,mode=$('bMode').value;$('bSym').value=sym;
  $('bRun').disabled=true;$('bOut').innerHTML=`<div class="empty">${t('bt_loading')}</div>`;
- try{const bars=await getKlines(sym,tf,n);if(bars.length<300)throw new Error(bars.length+' bars');const I=compute(bars,cfg);lastBt={sym,tf,bars,R:backtest(I,cfg,mode)};renderBt()}
+ try{const bars=await getKlines(sym,tf,n);if(bars.length<300)throw new Error(bars.length+' bars');const I=compute(bars,cfg);await attachHtf(I,sym,tf);lastBt={sym,tf,bars,R:backtest(I,cfg,mode)};renderBt()}
  catch(e){$('bOut').innerHTML=`<div class="empty">${t('bt_fail')}: ${esc(e.message||e)}</div>`}finally{$('bRun').disabled=false}}
 function renderBt(){if(!lastBt){$('bOut').innerHTML=`<div class="empty">${t('bt_empty')}</div>`;return}
  const {sym,tf,bars,R}=lastBt,st=R.stats;
@@ -714,8 +781,8 @@ function renderRules(){const heat=S.results.filter(r=>r.sig).length*cfg.risk;
 function renderAlerts(){$('aList').innerHTML=S.alerts.length?S.alerts.slice(0,60).map(a=>`<div class="alert"><span class="pill ${a.sig.strat}">${pbName(a.sig)}</span> <b>${a.sym}</b> ${a.tf} · Entry ${fmtP(a.sig.entry)} · SL ${fmtP(a.sig.stop)} · TP1 ${fmtP(a.sig.tp1)} · TP2 ${fmtP(a.sig.tp2)} · ${t('c_score')} ${a.sig.score}${a.prob&&a.prob.n?' · '+t('conf')+' '+t('g_'+a.prob.grade)+' (TP1 '+(a.prob.p1*100).toFixed(0)+'%)':''}${a.demo?' · demo':''}<small>${tstr(a.at)}</small></div>`).join(''):`<div class="empty">${t('noalerts')}</div>`;$('aAuto').value=String(cfg.auto)}
 function fillCfg(){for(const k in DEF){const el=$('k_'+k);if(!el)continue;if(el.type==='checkbox')el.checked=!!cfg[k];else el.value=cfg[k]}$('qtf').value=cfg.tf;$('sMode').value=cfg.mode;$('rEq').value=cfg.equity;$('rRisk').value=cfg.risk;$('rAlloc').value=cfg.maxAlloc}
 function planFor(sym){const r=S.results.find(x=>x.sym===sym);if(!r||!r.sig)return;S.dSym=sym;location.hash='dashboard';showDash(sym);$('rSym').value=sym;$('rEntry').value=+r.sig.entry.toPrecision(6);$('rStop').value=+r.sig.stop.toPrecision(6);calc()}
-function testSignal(){const r=S.results.find(x=>x.sym===S.dSym&&x.sig)||S.results.find(x=>x.sig);if(r)return{sym:r.sym,sig:r.sig,prob:r.prob};
- const I=S.cache['BTCUSDT'+S.scanTf];if(!I)return null;const c=I.c[I.n-1],at=I.at[I.n-1];const sig={...tfPlan('Breakout',c,at,cfg),score:70,riskOff:false};return{sym:'BTCUSDT',sig,prob:probOf(eventStats(I,cfg,'TF'),'pair')}}
+function testSignal(){const r=S.results.find(x=>x.sym===S.dSym&&x.sig)||S.results.find(x=>x.sig);if(r)return{sym:r.sym,sig:r.sig,prob:r.prob,ex:r};
+ const I=S.cache['BTCUSDT'+S.scanTf];if(!I)return null;const c=I.c[I.n-1],at=I.at[I.n-1];const sig={...tfPlan('Breakout',c,at,cfg),score:70,riskOff:false};const rb=S.results.find(x=>x.sym==='BTCUSDT');return{sym:'BTCUSDT',sig,prob:probOf(eventStats(I,cfg,'TF'),'pair'),ex:rb}}
 function applyLang(){document.documentElement.lang=lang;for(const el of document.querySelectorAll('[data-i]'))el.textContent=t(el.dataset.i);for(const el of document.querySelectorAll('[data-ih]'))el.innerHTML=t(el.dataset.ih);
  for(const b of document.querySelectorAll('#langSeg button'))b.classList.toggle('on',b.dataset.lang===lang);setStatus();if(S.lastScan)renderAll();else renderDash();renderRules();calc();renderBt();if(figs.has($('cFig')))loadChart()}
 
@@ -734,6 +801,7 @@ const VIEWS=['dashboard','scanner','chart','backtest','risk','alerts','config'];
 function route(){const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'dashboard';for(const x of VIEWS)$('v-'+x).classList.toggle('on',x===v);for(const a of document.querySelectorAll('nav a'))a.classList.toggle('on',a.dataset.v===v);
  if(v==='chart'&&!figs.has($('cFig'))&&S.lastScan)loadChart();for(const [el,d] of figs)drawChart(el,d)}
 window.addEventListener('hashchange',route);
+document.addEventListener('click',e=>{const b=e.target.closest('.lyr button');if(!b)return;S.layers[b.dataset.ly]=!S.layers[b.dataset.ly];LS.set('layers',S.layers);paintLayers();for(const [el,d] of figs)drawChart(el,d)});
 $('langSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;lang=b.dataset.lang;LS.set('lang',lang);applyLang()};
 $('scanBtn').onclick=scan;
 $('qtf').onchange=e=>{cfg.tf=e.target.value;LS.set('cfg',cfg);scan()};
@@ -745,8 +813,8 @@ $('cLoad').onclick=loadChart;$('cSym').onkeydown=e=>{if(e.key==='Enter')loadChar
 $('bRun').onclick=runBt;
 for(const id of ['rEq','rRisk','rAlloc','rEntry','rStop','rSym'])$(id).oninput=calc;
 $('aTest').onclick=async()=>{try{await sendTg('✅ '+t('tg_hello'));$('tgMsg').textContent=t('tg_ok')}catch(e){$('tgMsg').textContent=t('failed')+': '+e.message}};
-$('aTestSig').onclick=async()=>{const x=testSignal();if(!x){$('tgMsg').textContent=t('connecting');return}try{await sendTg(planText(x.sym,S.scanTf,x.sig,true,x.prob));$('tgMsg').textContent=t('sent')+': '+x.sym}catch(e){$('tgMsg').textContent=t('failed')+': '+e.message}};
-$('aCopy').onclick=async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(S.alerts.map(a=>plainText(planText(a.sym,a.tf,a.sig,a.demo,a.prob))).join('\n\n— — —\n\n'));flash(b,t('copied'))}catch(err){flash(b,t('failed'))}};
+$('aTestSig').onclick=async()=>{const x=testSignal();if(!x){$('tgMsg').textContent=t('connecting');return}try{await sendTg(planText(x.sym,S.scanTf,x.sig,true,x.prob,x.ex));$('tgMsg').textContent=t('sent')+': '+x.sym}catch(e){$('tgMsg').textContent=t('failed')+': '+e.message}};
+$('aCopy').onclick=async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(S.alerts.map(a=>plainText(planText(a.sym,a.tf,a.sig,a.demo,a.prob,a.ex))).join('\n\n— — —\n\n'));flash(b,t('copied'))}catch(err){flash(b,t('failed'))}};
 $('aClear').onclick=()=>{S.alerts=[];LS.set('alerts',[]);renderAlerts()};
 $('aAuto').onchange=e=>{cfg.auto=+e.target.value;LS.set('cfg',cfg)};
 $('cfgForm').onsubmit=e=>{e.preventDefault();for(const k in DEF){const el=$('k_'+k);if(!el)continue;cfg[k]=el.type==='checkbox'?el.checked:typeof DEF[k]==='number'?(el.value===''||isNaN(+el.value)?DEF[k]:+el.value):el.value.trim()}LS.set('cfg',cfg);S.cache={};figs.delete($('cFig'));$('cfgMsg').textContent=t('saved');fillCfg();calc();probeLive().then(scan)};
@@ -754,7 +822,7 @@ $('cfgReset').onclick=()=>{const keep={tgToken:cfg.tgToken,tgChat:cfg.tgChat,tgO
 setInterval(refreshPrices,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPrices()});
 setInterval(()=>{if(cfg.auto>0&&!S.busy&&Date.now()-S.lastScan>=cfg.auto*36e5)scan()},60000);
 
-fillCfg();applyLang();applyTheme();route();
+fillCfg();applyLang();applyTheme();paintLayers();route();
 (async()=>{setStatus(t('connecting'));await probeLive();await scan();if(location.hash==='#chart')loadChart()})();
 }
 </script>
