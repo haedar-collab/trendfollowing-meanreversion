@@ -153,6 +153,42 @@ SMC & PA adalah **informasi konfluensi**, bukan syarat sinyal. Skor dan probabil
 
 ---
 
+## Audit keandalan (22 Nov 2026)
+
+**Uji teknis (lulus):**
+- Look-ahead: 2.160 titik diuji ulang dengan data masa depan dipotong, termasuk 43 sinyal. Hasilnya sama persis, 0 selisih.
+- Invarian backtest: 398 trade, 0 pelanggaran (urutan waktu, posisi tidak tumpang tindih, R tidak melewati −1R kecuali karena gap).
+- Probabilitas sekarang dihitung dari mesin backtest yang sama, jadi angkanya identik dengan backtest.
+
+**Perbaikan dari audit:**
+- Ganti timeframe saat scan berjalan sebelumnya bisa mencampur data dua timeframe. Sekarang pengaturan dikunci per scan, dan scan baru diantrekan.
+- Satu simbol salah di tab Chart sebelumnya membuat harga live berhenti update (Binance menolak seluruh batch). Sekarang hanya simbol valid yang diminta.
+- Pair yang di-halt atau datanya basi sekarang dilewati.
+- Request yang gagal (timeout, 5xx, 429) dicoba ulang sekali, dengan menghormati Retry-After.
+- Ukuran posisi dibulatkan ke lot size Binance, dan ada peringatan kalau di bawah minimum notional.
+- Telegram diberi jeda 1,1 detik antar pesan, sesuai limit per chat.
+- Filter MTF lebih ketat: sinyal trend hanya lolos jika HTF terkonfirmasi bullish. Data HTF yang kurang tidak lagi diloloskan.
+- Input simbol disanitasi.
+- Stablecoin varian USD (mis. RWUSD) dikeluarkan dari universe.
+
+**Uji strategi dengan data Binance asli** (10 pair besar, 3.000 bar, fee 0,1% + slippage 0,05% per sisi, risiko 1%/trade):
+
+| Timeframe | Strategi | Trade | Win | Profit factor | Ekspektansi | t-stat |
+|---|---|---|---|---|---|---|
+| 4H | Trend | 164 | 43% | 0,85 | −0,08R | −0,87 |
+| 4H | Reversion | 75 | 59% | 0,73 | −0,10R | −1,12 |
+| 1D | Trend | 224 | 44% | 1,31 | +0,14R | 1,37 |
+| 1D | Reversion | 82 | 68% | 0,97 | −0,01R | −0,13 |
+
+Kesimpulan: di **4H** kedua strategi belum punya edge, ekspektansinya negatif setelah biaya. Di **1D**, trend following positif tapi belum signifikan secara statistik (t < 2). Mean reversion mendekati impas. Gunakan sebagai alat bantu analisis dan forward test dengan nominal kecil, bukan sebagai sinyal otomatis.
+
+**Batasan yang masih ada:**
+- Auto-scan hanya berjalan selama halaman terbuka.
+- Backtest dan probabilitas tidak memakai filter BTC risk-off, hanya filter MTF per pair.
+- Hasil di atas bisa berubah setiap kali data bertambah.
+
+---
+
 ## Cara upload (GitHub Pages)
 
 1. Login ke GitHub, lalu **New repository**, misalnya `tradesys-dual`, set **Public**.

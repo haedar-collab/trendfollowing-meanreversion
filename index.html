@@ -342,7 +342,7 @@ function evalAt(I,i,cfg,ctx){
  const up=c>e200&&e50>e200,dn=c<e200&&e50<e200;
  const regime=a>=cfg.adxTrend&&up?'Uptrend':a>=cfg.adxTrend&&dn?'Downtrend':a<=cfg.adxRange?'Range':'Transition';
  const ret20=i>=20?c/I.c[i-20]-1:0,rs=ret20-(ctx?ctx.btcRet20:0),z=I.sd[i]?(c-I.s20[i])/I.sd[i]:0;
- const hs=I.htf?I.htf[i]:NaN,tfOk=!cfg.mtf||!(hs===0||hs===-1),mrOk=!cfg.mtf||hs!==-1;
+ const hs=I.htf?I.htf[i]:NaN,tfOk=!cfg.mtf||!I.htf||hs===1,mrOk=!cfg.mtf||hs!==-1;
  const out={regime,adx:a,z,rsi2:I.r2[i],rsi14:I.r14[i],rs,price:c,atr:at,sig:null,t:I.b[i].t,htf:hs};
  const stack=e20>e50&&e50>e200&&c>e200;
  if(tfOk&&a>=cfg.adxTrend&&stack){
@@ -415,18 +415,8 @@ function smcSummary(I){const Z=smc(I),n=I.n-1,p=I.c[n],at=I.at[n],lastEv=Z.ev[Z.
  let pa=null;for(let i=n;i>=n-1;i--){const q=paAt(I,i);if(q&&q.d!==0){pa=q;break}}
  return{trend:Z.trend,lastEv:lastEv?{type:lastEv.type,dir:lastEv.dir,p:lastEv.p}:null,eq:Z.eq,zone:isFinite(Z.eq)?(p<Z.eq?'discount':'premium'):null,ob:ob?{top:ob.top,bot:ob.bot}:null,obNear:ob?p-ob.top<=at:false,fvg:fvg?{top:fvg.top,bot:fvg.bot}:null,fvgNear:fvg?p-fvg.top<=2*at:false,pa:pa||paAt(I,n)}}
 function wilson(k,n,z=1.96){if(!n)return 0;const p=k/n,d=1+z*z/n;return Math.max(0,(p+z*z/(2*n)-z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n)))/d)}
-function eventStats(I,cfg,strat){let n=0,h1=0,h2=0,sl=0,i=210;const maxB=strat==='TF'?60:cfg.mrMaxBars;
- while(i<I.n-2){const ev=evalAt(I,i,cfg,null);if(!ev||!ev.sig||ev.sig.strat!==strat){i++;continue}
-  const s=ev.sig,e=I.o[i+1],d=s.entry-s.stop;let stop=e-d;const tp1=strat==='TF'?e+d:e+(s.tp2-e)/2,tp2=strat==='TF'?e+2*d:s.tp2;
-  if(!(d>0)||tp2<=e){i++;continue}
-  let out=null,got1=false,j=i+1;const lim=i+maxB;
-  for(;j<=Math.min(I.n-1,lim);j++){
-   if(I.l[j]<=stop){out=got1?'tp1':'sl';break}
-   if(!got1&&I.h[j]>=tp1){got1=true;stop=e;if(I.h[j]>=tp2){out='tp2';break}continue}
-   if(got1&&I.h[j]>=tp2){out='tp2';break}}
-  if(!out){if(lim<=I.n-1)out=got1?'tp1':'exp';else{i=j;continue}}
-  n++;if(out==='sl')sl++;if(out==='tp1'||out==='tp2')h1++;if(out==='tp2')h2++;i=j+1}
- return{n,h1,h2,sl}}
+function eventStats(I,cfg,strat){const T=backtest(I,cfg,strat.toLowerCase()).trades.filter(t=>t.why!=='open');
+ return{n:T.length,h1:T.filter(t=>t.hits>=1).length,h2:T.filter(t=>t.hits>=2).length,sl:T.filter(t=>t.hits===0&&(t.why==='stop'||t.why==='gap')).length}}
 function probOf(st,src){const n=st.n,lb1=wilson(st.h1,n);return{n,src,p1:n?st.h1/n:0,p2:n?st.h2/n:0,psl:n?st.sl/n:0,lb1,grade:n<10?'low_n':lb1>=0.5?'high':lb1>=0.35?'med':'low'}}
 function rng(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
 function hashStr(str){let h=7;for(const ch of str)h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)+1}
@@ -446,7 +436,7 @@ function demoBars(sym,tf,n,now){const r=rng(hashStr(sym+tf)),ms=TFMS[tf]||TFMS['
 /* ---------- language ---------- */
 const U=x=>String(x||'').toUpperCase();
 const T={
-en:{now_entry:'Now → Entry',from_entry:'from entry',lvl:'Level',c_nowe:'Now→Entry',htf:'HTF',bull:'Bullish',bear:'Bearish',neut:'Neutral',na:'n/a',smc_t:'SMC & price action',cf_t:'Confluence',discount:'Discount',premium:'Premium',none:'none',
+en:{too_small:'Size is below Binance minimum (lot size or 5 USDT notional); raise equity or risk.',now_entry:'Now → Entry',from_entry:'from entry',lvl:'Level',c_nowe:'Now→Entry',htf:'HTF',bull:'Bullish',bear:'Bearish',neut:'Neutral',na:'n/a',smc_t:'SMC & price action',cf_t:'Confluence',discount:'Discount',premium:'Premium',none:'none',
  ck_htf:tf=>`Higher timeframe (${U(tf)}) bullish`,ck_struct:'Bullish market structure (last break up)',ck_zone:'Price in discount (below 50% of the swing range)',ck_ob:'At or near a bullish order block',ck_fvg:'Unfilled bullish FVG just below price',ck_pa:'Bullish candle pattern on the last 2 bars',
  pa_bull_engulf:'Bullish engulfing',pa_bear_engulf:'Bearish engulfing',pa_hammer:'Hammer (bullish pin bar)',pa_shooting:'Shooting star (bearish pin bar)',pa_inside:'Inside bar',pa_doji:'Doji',
  ly_smc:'Structure',ly_ob:'Order blocks',ly_fvg:'FVG',ly_pa:'Candles',cf_mtf:'Multi-timeframe filter: trend needs a bullish higher timeframe; reversion is blocked when it is bearish',
@@ -493,7 +483,7 @@ en:{now_entry:'Now → Entry',from_entry:'from entry',lvl:'Level',c_nowe:'Now→
  cf_donchian:'Breakout length (bars)',cf_volMult:'Volume multiple',cf_mrZ:'Z-score trigger (−)',cf_mrRsi2:'RSI 2 trigger (≤)',cf_mrMaxBars:'Time stop (bars)',cf_minRR:'Min reward:risk to TP2',cf_mrE200:'Only above EMA 200',
  cf_risk:'Risk and costs',cf_equity:'Equity (USDT)',cf_riskp:'Risk per trade %',cf_maxAlloc:'Max allocation per position %',cf_maxPos:'Max open positions',cf_maxHeat:'Max portfolio heat %',cf_fee:'Fee per side %',cf_slip:'Slippage per side %',
  save:'Save and rescan',reset:'Reset defaults',saved:'Saved.',restored:'Defaults restored; save to rescan.'},
-id:{now_entry:'Sekarang → Entry',from_entry:'dari entry',lvl:'Level',c_nowe:'Skrg→Entry',htf:'HTF',bull:'Bullish',bear:'Bearish',neut:'Netral',na:'n/a',smc_t:'SMC & price action',cf_t:'Konfluensi',discount:'Discount',premium:'Premium',none:'tidak ada',
+id:{too_small:'Ukuran di bawah minimum Binance (lot size atau notional 5 USDT); naikkan modal atau risiko.',now_entry:'Sekarang → Entry',from_entry:'dari entry',lvl:'Level',c_nowe:'Skrg→Entry',htf:'HTF',bull:'Bullish',bear:'Bearish',neut:'Netral',na:'n/a',smc_t:'SMC & price action',cf_t:'Konfluensi',discount:'Discount',premium:'Premium',none:'tidak ada',
  ck_htf:tf=>`Timeframe besar (${U(tf)}) bullish`,ck_struct:'Struktur pasar bullish (break terakhir ke atas)',ck_zone:'Harga di area discount (di bawah 50% range swing)',ck_ob:'Di dalam atau dekat order block bullish',ck_fvg:'Ada FVG bullish belum terisi tepat di bawah harga',ck_pa:'Pola candle bullish di 2 bar terakhir',
  pa_bull_engulf:'Bullish engulfing',pa_bear_engulf:'Bearish engulfing',pa_hammer:'Hammer (pin bar bullish)',pa_shooting:'Shooting star (pin bar bearish)',pa_inside:'Inside bar',pa_doji:'Doji',
  ly_smc:'Struktur',ly_ob:'Order block',ly_fvg:'FVG',ly_pa:'Candle',cf_mtf:'Filter multi-timeframe: trend wajib timeframe besar bullish; reversion diblokir saat timeframe besar bearish',
@@ -548,10 +538,11 @@ let lang=LS.get('lang','id');
 const t=(k,...a)=>{const v=(T[lang]&&T[lang][k]!==undefined)?T[lang][k]:T.en[k];return typeof v==='function'?v(...a):(v===undefined?k:v)};
 const S={results:[],cache:{},btc:null,filter:'sig',alerts:LS.get('alerts',[]),lastScan:0,busy:false,dSym:null,errs:[],scanTf:cfg.tf};
 let live=false,liveErr='';
-S.px={};S.pxAt=0;S.layers=LS.get('layers',{smc:true,ob:true,fvg:true,pa:true});
+S.px={};S.pxAt=0;S.filt={};
+async function loadFilters(syms){const need=syms.filter(x=>!S.filt[x]);if(!live||!need.length)return;try{const j=await api('/api/v3/exchangeInfo',{symbols:JSON.stringify(need.slice(0,100))});for(const x of (j&&j.symbols)||[]){const g=k=>x.filters.find(f=>f.filterType===k)||{};S.filt[x.symbol]={step:+g('LOT_SIZE').stepSize||0,minQty:+g('LOT_SIZE').minQty||0,minNotional:+(g('NOTIONAL').minNotional||g('MIN_NOTIONAL').minNotional)||0,status:x.status}}}catch(e){}}S.layers=LS.get('layers',{smc:true,ob:true,fvg:true,pa:true});
 function paintLayers(){for(const b of document.querySelectorAll('.lyr button'))b.classList.toggle('on',!!S.layers[b.dataset.ly])}
 const nowPx=sym=>{if(S.px[sym])return S.px[sym];const I=S.cache[sym+S.scanTf]||S.cache[sym+cfg.tf];return I?I.c[I.n-1]:NaN};
-async function refreshPrices(){if(!live||document.hidden)return;const syms=[...new Set(S.results.map(r=>r.sym).concat(['BTCUSDT',$('cSym').value.toUpperCase()]).filter(x=>/^[A-Z0-9]+USDT$/.test(x)))].slice(0,100);
+async function refreshPrices(){if(!live||document.hidden)return;const syms=[...new Set(S.results.map(r=>r.sym).concat(['BTCUSDT']).concat(Object.keys(S.cache).map(k=>k.replace(/(1h|4h|1d)$/,''))).filter(x=>/^[A-Z0-9]{2,20}USDT$/.test(x)))].slice(0,100);
  try{const a=await api('/api/v3/ticker/price',{symbols:JSON.stringify(syms)});if(Array.isArray(a)){for(const x of a)S.px[x.symbol]=+x.price;S.pxAt=Date.now();paintPrices()}}catch(e){}}
 function pstatus(s,p){if(!isFinite(p))return null;if(p<=s.stop)return['bad','st_invalid'];if(p>=s.tp1)return['bad','st_tp1'];if(p>s.maxChase)return['wn','st_chase'];if(p<s.zoneLo)return['wn','st_below'];if(p<=s.entry*1.002)return['ok','st_inzone'];return['ok','st_above']}
 function paintPrices(){for(const el of document.querySelectorAll('[data-px]'))el.textContent=fmtP(nowPx(el.dataset.px));
@@ -568,9 +559,13 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const pbName=s=>t('pb_'+s.strat)+' · '+t('su_'+s.setup);
 
 /* ---------- data ---------- */
-async function api(path,params){const q=new URLSearchParams(params).toString();const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),15000);
- try{const r=await fetch(cfg.endpoint+path+(q?'?'+q:''),{signal:ctl.signal});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error((j&&j.msg)||('HTTP '+r.status));return j}
- catch(e){throw new Error(e.name==='AbortError'?'timeout':e.message)}finally{clearTimeout(to)}}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function api(path,params,tries=2){const q=new URLSearchParams(params).toString();
+ for(let k=1;;k++){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),15000);let retryMs=0,err;
+  try{const r=await fetch(cfg.endpoint+path+(q?'?'+q:''),{signal:ctl.signal});const j=await r.json().catch(()=>null);if(r.ok)return j;
+   err=new Error((j&&j.msg)||('HTTP '+r.status));err.status=r.status;if(r.status===429||r.status===418)retryMs=Math.min(10,+(r.headers.get('Retry-After')||2))*1000;else if(r.status>=500)retryMs=1500}
+  catch(e){err=new Error(e.name==='AbortError'?'timeout':e.message);retryMs=1500}finally{clearTimeout(to)}
+  if(k>=tries||!retryMs)throw err;await sleep(retryMs)}}
 async function probeLive(){try{await api('/api/v3/ping',{});live=true;liveErr=''}catch(e){live=false;liveErr=e.message}return live}
 async function getKlines(sym,tf,n){
  if(!live)return demoBars(sym,tf,n,Date.now());
@@ -583,15 +578,15 @@ async function getKlines(sym,tf,n){
 const STABLE=/^(USDC|FDUSD|TUSD|DAI|USDP|BUSD|EUR|AEUR|EURI|PYUSD|USD1|XUSD|USDE|BFUSD|GBP)USDT$/;
 async function attachHtf(I,sym,tf){const ht=HTF[tf];if(!ht)return I;const need=Math.min(1500,Math.ceil(I.n*TFMS[tf]/TFMS[ht])+80);
  try{const hb=await getKlines(sym,ht,need);I.htf=alignHtf(I,htfStates(hb))}catch(e){I.htf=null}return I}
-async function universe(){
- if(cfg.mode!=='all')return cfg.watch.split(/[\s,]+/).map(s=>s.trim().toUpperCase()).filter(Boolean).map(s=>s.endsWith('USDT')?s:s+'USDT');
+async function universe(C=cfg){
+ if(C.mode!=='all')return C.watch.split(/[\s,]+/).map(s=>s.trim().toUpperCase()).filter(Boolean).map(s=>s.endsWith('USDT')?s:s+'USDT');
  if(!live)return Object.keys(DEMO_BASE);
  const all=await api('/api/v3/ticker/24hr',{type:'MINI'});if(!Array.isArray(all))throw new Error('ticker list unavailable');
- return all.filter(x=>x.symbol.endsWith('USDT')&&!STABLE.test(x.symbol)&&!/(UP|DOWN|BULL|BEAR)USDT$/.test(x.symbol)&&+x.quoteVolume>=cfg.minVol).sort((a,b)=>b.quoteVolume-a.quoteVolume).slice(0,cfg.topN).map(x=>x.symbol)}
+ return all.filter(x=>x.symbol.endsWith('USDT')&&!STABLE.test(x.symbol)&&!/(UP|DOWN|BULL|BEAR)USDT$/.test(x.symbol)&&!/USD[A-Z0-9]?USDT$/.test(x.symbol)&&+x.quoteVolume>=C.minVol).sort((a,b)=>b.quoteVolume-a.quoteVolume).slice(0,C.topN).map(x=>x.symbol)}
 async function pool(items,k,fn){let idx=0;const run=async()=>{while(idx<items.length){const it=items[idx++];try{await fn(it)}catch(e){S.errs.push(it+': '+(e.message||e))}}};await Promise.all(Array.from({length:k},run))}
 
 /* ---------- plan helpers ---------- */
-function sizeFor(sig){const d=sig.entry-sig.stop;if(!(d>0))return null;let qty=cfg.equity*cfg.risk/100/d;const cap=cfg.equity*cfg.maxAlloc/100/sig.entry;const capped=qty>cap;if(capped)qty=cap;return{qty,val:qty*sig.entry,risk:qty*d,capped}}
+function sizeFor(sig,sym){const d=sig.entry-sig.stop;if(!(d>0))return null;let qty=cfg.equity*cfg.risk/100/d;const cap=cfg.equity*cfg.maxAlloc/100/sig.entry;const capped=qty>cap;if(capped)qty=cap;const f=sym&&S.filt[sym];if(f&&f.step>0)qty=Math.floor(qty/f.step+1e-9)*f.step;const tooSmall=!!(f&&(qty<f.minQty||qty*sig.entry<f.minNotional));return{qty,val:qty*sig.entry,risk:qty*d,capped,tooSmall}}
 const fmtU=v=>!isFinite(v)?'—':v.toLocaleString('en-US',{maximumFractionDigits:2});
 const fmtQ=q=>q>=1000?Math.floor(q).toLocaleString('en-US'):q>=1?q.toFixed(q>=100?1:3):q.toPrecision(4);
 function rungs(s){const e=s.entry,R=e-s.stop,rr=x=>((x-e)/R).toFixed(1)+'R';const rows=[];
@@ -600,7 +595,7 @@ function rungs(s){const e=s.entry,R=e-s.stop,rr=x=>((x-e)/R).toFixed(1)+'R';cons
  rows.push({c:'tp',lb:'TP1',px:s.tp1,ds:pct(s.tp1/e-1),nt:`${t('take')} ${s.alloc[0]}% · ${rr(s.tp1)} · ${t('move_be')}`});
  rows.push({c:'en',lb:'Entry',px:e,ds:'',nt:`${t('entry_zone')} ${fmtP(s.zoneLo)} – ${fmtP(e)}`});
  rows.push({c:'sl',lb:'Stop loss',px:s.stop,ds:pct(s.stop/e-1),nt:'−1R'});return rows}
-function planText(sym,tf,s,test,pr,ex){const z=sizeFor(s),base=sym.replace('USDT','');const L=[];
+function planText(sym,tf,s,test,pr,ex){const z=sizeFor(s,sym),base=sym.replace('USDT','');const L=[];
  if(test)L.push('⚠️ <b>'+t('tg_testline')+'</b>');
  L.push(`<b>${s.strat==='TF'?'🔵':'🟠'} ${esc(pbName(s).toUpperCase())}</b>`);
  L.push(`<b>${sym}</b> · ${U(tf)} · ${t('tgl_score')} ${s.score}/100`);const np=nowPx(sym);if(isFinite(np)){const st=pstatus(s,np);L.push(`${t('tgl_now')}: <b>${fmtP(np)}</b> · ${t('now_entry')}: ${pct(s.entry/np-1,2)}${st?' · '+t(st[1]):''}`)}L.push('');
@@ -610,7 +605,7 @@ function planText(sym,tf,s,test,pr,ex){const z=sizeFor(s),base=sym.replace('USDT
  L.push(`TP2: <b>${fmtP(s.tp2)}</b> (${pct(s.tp2/s.entry-1)}) · ${t('take')} ${s.alloc[1]}%`);
  if(s.tp3)L.push(`TP3: ${t('trail')} 3×ATR (ref ${fmtP(s.tp3)}, ${pct(s.tp3/s.entry-1)})`);
  L.push(`${t('rr2')}: ${s.rr.toFixed(2)}`);
- if(z)L.push(`${t('tgl_size')}: ${fmtQ(z.qty)} ${base} ≈ ${fmtU(z.val)} USDT · ${t('tgl_risk')} ${fmtU(z.risk)} USDT`);L.push('');
+ if(z&&z.tooSmall)L.push('⚠️ '+t('too_small'));if(z)L.push(`${t('tgl_size')}: ${fmtQ(z.qty)} ${base} ≈ ${fmtU(z.val)} USDT · ${t('tgl_risk')} ${fmtU(z.risk)} USDT`);L.push('');
  L.push(`<b>${t('tgl_mgmt')}</b>`);t('mg_'+s.strat).forEach((m,i)=>L.push(`${i+1}. ${esc(m)}`));
  if(ex&&ex.smc){const z=ex.smc,ck=confl(ex,tf);L.push('');L.push(`<b>MTF ${U(HTF[tf])}:</b> ${htfName(ex.htf)}`);L.push(`<b>SMC:</b> ${z.trend===1?t('bull'):z.trend===-1?t('bear'):t('neut')}${z.lastEv?' · '+z.lastEv.type+(z.lastEv.dir>0?' ↑':' ↓')+' '+fmtP(z.lastEv.p):''}${z.zone?' · '+t(z.zone):''}`);
   if(z.ob)L.push(`OB: ${fmtP(z.ob.bot)} – ${fmtP(z.ob.top)}`);if(z.fvg)L.push(`FVG: ${fmtP(z.fvg.bot)} – ${fmtP(z.fvg.top)}`);L.push(`<b>PA:</b> ${z.pa?t('pa_'+z.pa.k):t('none')}`);L.push(`${t('cf_t')}: ${ck.filter(c=>c[1]).length}/${ck.length}`)}
@@ -627,28 +622,29 @@ function flash(btn,txt,ms=2200){const o=btn.dataset.i?t(btn.dataset.i):btn.textC
 /* ---------- scan ---------- */
 function setStatus(msg){$('dot').className='dot'+(live?' live':'');$('stxt').textContent=msg||(live?t('st_live'):t('st_demo'))+(S.lastScan?' · '+t('scanned')+' '+tstr(S.lastScan).split(', ').pop():'')}
 async function scan(){
- if(S.busy)return;S.busy=true;S.errs=[];$('scanBtn').disabled=true;const prog=$('prog');prog.style.width='4%';setStatus(t('scanning')+' '+cfg.tf+'…');
+ if(S.busy){S.again=true;return}S.busy=true;S.again=false;const C={...cfg};S.errs=[];$('scanBtn').disabled=true;const prog=$('prog');prog.style.width='4%';setStatus(t('scanning')+' '+C.tf+'…');
  try{
-  const bd=await getKlines('BTCUSDT','1d',300),Id=compute(bd,cfg),i=Id.n-1;
-  const bt=await getKlines('BTCUSDT',cfg.tf,300),It=compute(bt,cfg),j=It.n-1;
+  const bd=await getKlines('BTCUSDT','1d',300),Id=compute(bd,C),i=Id.n-1;
+  const bt=await getKlines('BTCUSDT',C.tf,300),It=compute(bt,C),j=It.n-1;
   S.btc={price:bt[j].c,chg:bd[i].c/bd[i-1].c-1,riskOn:bd[i].c>Id.e200[i]&&Id.e50[i]>Id.e200[i],ret20:It.c[j]/It.c[j-20]-1,adx:Id.dx[i]};
   const ctx={btcRiskOn:S.btc.riskOn,btcRet20:S.btc.ret20};
-  const syms=await universe();let done=0;const res=[];
-  await pool(syms,4,async sym=>{const bars=sym==='BTCUSDT'?bt:await getKlines(sym,cfg.tf,300);if(bars.length<230)throw new Error('history');
-   const I=compute(bars,cfg);await attachHtf(I,sym,cfg.tf);const ev=evalAt(I,I.n-1,cfg,ctx);S.cache[sym+cfg.tf]=I;if(ev)ev.smc=smcSummary(I);const back=cfg.tf==='1h'?24:cfg.tf==='4h'?6:1;
+  const syms=await universe(C);let done=0;const res=[];
+  await pool(syms,4,async sym=>{const bars=sym==='BTCUSDT'?bt:await getKlines(sym,C.tf,300);if(bars.length<230)throw new Error('history');if(live&&Date.now()-bars[bars.length-1].ct>2*TFMS[C.tf])throw new Error('stale data (halted?)');
+   const I=compute(bars,C);await attachHtf(I,sym,C.tf);const ev=evalAt(I,I.n-1,C,ctx);S.cache[sym+C.tf]=I;if(ev)ev.smc=smcSummary(I);const back=C.tf==='1h'?24:C.tf==='4h'?6:1;
    if(ev)res.push({sym,...ev,chg:I.c[I.n-1]/I.c[Math.max(0,I.n-1-back)]-1});done++;prog.style.width=(4+96*done/syms.length)+'%'});
   const sigs=res.filter(r=>r.sig),per={},pooled={TF:{n:0,h1:0,h2:0,sl:0},MR:{n:0,h1:0,h2:0,sl:0}};
-  await pool(sigs,3,async r=>{const I1=compute(await getKlines(r.sym,cfg.tf,2000),cfg);await attachHtf(I1,r.sym,cfg.tf);const st=eventStats(I1,cfg,r.sig.strat);per[r.sym]=st;const P=pooled[r.sig.strat];for(const k in st)P[k]+=st[k]});
+  await pool(sigs,3,async r=>{const I1=compute(await getKlines(r.sym,C.tf,2000),C);await attachHtf(I1,r.sym,C.tf);const st=eventStats(I1,C,r.sig.strat);per[r.sym]=st;const P=pooled[r.sig.strat];for(const k in st)P[k]+=st[k]});
   for(const r of sigs){const st=per[r.sym];if(!st)continue;const P=pooled[r.sig.strat];r.prob=st.n>=15||P.n<=st.n?probOf(st,'pair'):probOf(P,'pool')}
-  S.results=res.sort((a,b)=>(b.sig?b.sig.score+100:0)-(a.sig?a.sig.score+100:0)||b.adx-a.adx);S.lastScan=Date.now();S.scanTf=cfg.tf;
+  await loadFilters(sigs.map(r=>r.sym));
+  S.results=res.sort((a,b)=>(b.sig?b.sig.score+100:0)-(a.sig?a.sig.score+100:0)||b.adx-a.adx);S.lastScan=Date.now();S.scanTf=C.tf;
   const fresh=[];
-  for(const r of res)if(r.sig){const key=r.sym+'|'+r.sig.strat+'|'+r.t+'|'+cfg.tf;if(!S.alerts.some(a=>a.key===key)){const a={key,at:Date.now(),sym:r.sym,tf:cfg.tf,demo:!live,sig:r.sig,prob:r.prob||null,ex:{smc:r.smc,htf:r.htf,price:r.price,atr:r.atr}};S.alerts.unshift(a);fresh.push(a)}}
+  for(const r of res)if(r.sig){const key=r.sym+'|'+r.sig.strat+'|'+r.t+'|'+C.tf;if(!S.alerts.some(a=>a.key===key)){const a={key,at:Date.now(),sym:r.sym,tf:C.tf,demo:!live,sig:r.sig,prob:r.prob||null,ex:{smc:r.smc,htf:r.htf,price:r.price,atr:r.atr}};S.alerts.unshift(a);fresh.push(a)}}
   S.alerts=S.alerts.filter(a=>a.sig).slice(0,200);LS.set('alerts',S.alerts);
-  if(live&&cfg.tgOn&&fresh.length)(async()=>{for(const a of fresh.slice(0,8)){try{await sendTg(planText(a.sym,a.tf,a.sig,false,a.prob,a.ex))}catch(e){setStatus('Telegram: '+e.message);break}}})();
+  if(live&&C.tgOn&&fresh.length)(async()=>{for(const a of fresh.slice(0,8)){try{await sendTg(planText(a.sym,a.tf,a.sig,false,a.prob,a.ex));await sleep(1100)}catch(e){setStatus('Telegram: '+e.message);break}}})();
   const top=S.results.find(r=>r.sig);if(!S.dSym||!S.results.some(r=>r.sym===S.dSym&&r.sig))S.dSym=top?top.sym:'BTCUSDT';
   setStatus();renderAll();refreshPrices()
  }catch(e){setStatus(t('scan_failed')+': '+(e.message||e))}
- finally{S.busy=false;$('scanBtn').disabled=false;setTimeout(()=>prog.style.width='0',600)}}
+ finally{S.busy=false;$('scanBtn').disabled=false;setTimeout(()=>prog.style.width='0',600);if(S.again){S.again=false;setTimeout(scan,50)}}}
 
 /* ---------- chart ---------- */
 const figs=new Map();
@@ -732,12 +728,12 @@ function probBlock(pr){if(!pr||!pr.n)return`<div class="prob"><small style="colo
  return`<div class="prob"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b style="font-size:14px">${t('prob_t')}</b><span>${t('conf')}: <span class="cf ${pr.grade}">${t('g_'+pr.grade)}</span></span></div>${row('TP1',pr.p1,'var(--tp)')}${row('TP2',pr.p2,'var(--tp)')}${row(t('p_sl'),pr.psl,'var(--sl)')}<p class="note" style="margin:8px 0 0">${pr.src==='pair'?t('prob_src_pair',pr.n,S.scanTf):t('prob_src_pool',pr.n)}. ${t('prob_note')} ${t('conf_rule',(pr.lb1*100).toFixed(0)+'%')}.</p></div>`}
 function renderPlan(r){const el=$('planCard');
  if(!r||!r.sig){el.innerHTML=`<h3>${t('plan')}</h3><div class="empty">${t('noplan')}</div>`;return}
- const s=r.sig,z=sizeFor(s),base=r.sym.replace('USDT','');
+ const s=r.sig,z=sizeFor(s,r.sym),base=r.sym.replace('USDT','');
  el.innerHTML=`<div class="ph"><div><span class="pill ${s.strat}">${pbName(s)}</span><b style="margin-top:6px">${r.sym} · ${U(S.scanTf)}</b></div><div class="score">${t('htf')} ${U(HTF[S.scanTf])}: ${htfCell(r.htf)}<br>${t('c_score')}<br><b>${s.score}</b><span>/100</span></div></div>
  <div class="nowrow"><div><small>${t('now_price')} · <span id="pxAge">${live&&S.pxAt?t('upd')+' '+tstr(S.pxAt).split(', ').pop():t('last_close')}</span></small><br><b class="live" data-px="${r.sym}">${fmtP(nowPx(r.sym))}</b> <small>${t('now_entry')}: <b style="font-size:13px"><span data-s="${r.sym}" data-pxe="${s.entry}">${pct(s.entry/nowPx(r.sym)-1,2)}</span></b></small></div><span class="stt" data-pst="${r.sym}"></span></div>
  <div class="rung" style="border-left-color:transparent;padding-block:4px;font-size:12.5px;color:var(--mute)"><span class="lb" style="font-weight:400">${t('lvl')}</span><span>${t('c_price')}</span><span class="ds" style="color:var(--mute)">${t('from_entry')}</span></div>
  <div class="ladder">${rungs(s).map(w=>`<div class="rung ${w.c}"><span class="lb">${w.lb}</span><span class="px">${fmtP(w.px)}</span><span class="ds">${w.ds}</span><span class="nt">${w.nt}</span></div>`).join('')}</div>
- ${z?`<div class="psize"><div>${t('sz')}<b>${fmtQ(z.qty)} ${base}</b></div><div>${t('val')}<b>${fmtU(z.val)} $</b></div><div>${t('rk')}<b>${fmtU(z.risk)} $</b></div></div>`:''}
+ ${z?`<div class="psize"><div>${t('sz')}<b>${fmtQ(z.qty)} ${base}</b></div><div>${t('val')}<b>${fmtU(z.val)} $</b></div><div>${t('rk')}<b>${fmtU(z.risk)} $</b></div></div>${z.tooSmall?`<p class="warnbox" style="margin:0 0 8px">${t('too_small')}</p>`:''}`:''}
  ${smcBlock(r)}
  ${probBlock(r.prob)}
  <ol>${t('mg_'+s.strat).map(m=>`<li>${m}</li>`).join('')}</ol>
@@ -752,7 +748,7 @@ function renderScanner(){
  (rows.length?rows.map(r=>`<tr class="click" data-sym="${r.sym}"><td><b>${r.sym.replace('USDT','')}</b></td><td class="n live" data-px="${r.sym}">${fmtP(nowPx(r.sym))}</td><td class="n">${pct(r.chg)}</td><td><span class="pill ${r.regime}">${t('rg_'+r.regime)}</span></td><td>${htfCell(r.htf)}</td><td>${r.sig?`<span class="pill ${r.sig.strat}">${pbName(r.sig)}</span>`:'—'}</td><td class="n">${r.sig?'<b>'+r.sig.score+'</b>':''}</td><td class="n">${r.prob&&r.prob.n?`<span class="cf ${r.prob.grade}">${(r.prob.p1*100).toFixed(0)}%</span>`:''}</td><td class="n">${r.sig?`<span data-s="${r.sym}" data-pxe="${r.sig.entry}">${pct(r.sig.entry/nowPx(r.sym)-1,2)}</span>`:''}</td><td class="n">${r.sig?fmtP(r.sig.entry):''}</td><td class="n sl">${r.sig?`${fmtP(r.sig.stop)} <small>${pct(r.sig.stop/r.sig.entry-1)}</small>`:''}</td><td class="n tp">${r.sig?`${fmtP(r.sig.tp1)} <small>${pct(r.sig.tp1/r.sig.entry-1)}</small>`:''}</td><td class="n tp">${r.sig?`${fmtP(r.sig.tp2)} <small>${pct(r.sig.tp2/r.sig.entry-1)}</small>`:''}</td><td class="n">${r.adx.toFixed(1)}</td><td class="n">${pct(r.rs)}</td><td>${r.sig?`<button class="sm" data-plan="${r.sym}">${t('plan_btn')}</button>`:''}</td></tr>`).join(''):`<tr><td colspan="16"><div class="empty">${t('nomatch')}</div></td></tr>`)+'</tbody>';
  $('sNote').textContent=t('snote',S.results.length,S.scanTf)+(S.errs.length?' · '+t('skipped')+': '+S.errs.slice(0,5).join('; '):'')}
 async function loadChart(){
- let sym=$('cSym').value.trim().toUpperCase();if(!sym.endsWith('USDT'))sym+='USDT';const tf=$('cTf').value;$('cSym').value=sym;$('cTitle').textContent=sym+' · '+U(tf)+' · '+t('loading');
+ let sym=$('cSym').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,20);if(!sym.endsWith('USDT'))sym+='USDT';const tf=$('cTf').value;$('cSym').value=sym;$('cTitle').textContent=sym+' · '+U(tf)+' · '+t('loading');
  try{let I=S.cache[sym+tf]&&S.cache[sym+tf].n>=500?S.cache[sym+tf]:null;if(!I){I=compute(await getKlines(sym,tf,600),cfg);await attachHtf(I,sym,tf)}S.cache[sym+tf]=I;const zs=smcSummary(I);
   const ev=evalAt(I,I.n-1,cfg,S.btc?{btcRiskOn:S.btc.riskOn,btcRet20:S.btc.ret20}:null),m=marksFor(I,I.n-150);
   const cp=ev&&ev.sig?probOf(eventStats(I,cfg,ev.sig.strat),'pair'):null;if(live&&!S.px[sym])api('/api/v3/ticker/price',{symbol:sym}).then(a=>{if(a&&a.price){S.px[sym]=+a.price;paintPrices()}}).catch(()=>{});
@@ -762,7 +758,7 @@ async function loadChart(){
  }catch(e){$('cTitle').textContent=sym+' · '+(e.message||'error')}}
 let lastBt=null;
 async function runBt(){
- let sym=$('bSym').value.trim().toUpperCase();if(!sym.endsWith('USDT'))sym+='USDT';const tf=$('bTf').value,n=+$('bN').value,mode=$('bMode').value;$('bSym').value=sym;
+ let sym=$('bSym').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,20);if(!sym.endsWith('USDT'))sym+='USDT';const tf=$('bTf').value,n=+$('bN').value,mode=$('bMode').value;$('bSym').value=sym;
  $('bRun').disabled=true;$('bOut').innerHTML=`<div class="empty">${t('bt_loading')}</div>`;
  try{const bars=await getKlines(sym,tf,n);if(bars.length<300)throw new Error(bars.length+' bars');const I=compute(bars,cfg);await attachHtf(I,sym,tf);lastBt={sym,tf,bars,R:backtest(I,cfg,mode)};renderBt()}
  catch(e){$('bOut').innerHTML=`<div class="empty">${t('bt_fail')}: ${esc(e.message||e)}</div>`}finally{$('bRun').disabled=false}}
