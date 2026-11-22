@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tradesys Edge Dual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600;7..72,700&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a trading desk instrument, dense, exact, calm
+   IDEA a printed market plate: the price chart is the main figure, signals are printed in two inks
+   PICTURE large candlestick plate of the best current setup, EMA ribbon, bands, entry/stop/target, ADX pane
+   COLOUR white ground, ink #10131a; prussian = trend following, carmine = mean reversion
+   TYPE Literata display + Literata text, tabular figures
+   LAYOUT header + tab row; dashboard: finding + figures, chart 2/3 beside signal list 1/3; phone stacks */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0f1217);--ink:light-dark(#10131a,#e8eaf0);--mute:light-dark(#5b6170,#9aa1b2);--rule:light-dark(#e2e4ea,#272c37);--panel:light-dark(#f5f6f8,#161b24);--tf:light-dark(#0b4f8a,#62a8ec);--mr:light-dark(#c1121f,#ff7070);--warn:light-dark(#8a5a00,#e3b341);--tfbg:light-dark(#e6eef7,#13243a);--mrbg:light-dark(#fbe9ea,#3a161a)}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Literata,Georgia,serif;overflow-x:clip}
+.wrap{max-width:1240px;margin:0 auto;padding:0 max(16px,3vw)}
+header{border-bottom:1px solid var(--rule)}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding-block:18px 10px}
+h1{font-size:clamp(26px,3.4vw,36px);line-height:1.05;letter-spacing:-.02em;margin:0;font-weight:700}
+h1 span{font-weight:400;color:var(--mute);font-size:.55em;letter-spacing:0;display:block;margin-top:6px}
+h2{font-size:clamp(22px,2.6vw,30px);line-height:1.1;letter-spacing:-.02em;margin:0 0 6px;text-wrap:balance}
+h3{font-size:17px;margin:0 0 8px}
+.grow{flex:1}
+.status{font-size:14px;color:var(--mute);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--warn);display:inline-block}
+.dot.live{background:var(--tf)}
+button,select,input{font:inherit;font-size:16px;color:var(--ink)}
+button{min-height:44px;padding:0 16px;border:1px solid var(--ink);background:var(--bg);border-radius:6px;cursor:pointer}
+button:hover{background:var(--panel)}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--tf);outline-offset:2px}
+button.pri{background:var(--ink);color:var(--bg)}
+button.pri:hover{opacity:.88}
+button.sm{min-height:36px;padding:0 10px;font-size:14px}
+button:disabled{opacity:.5;cursor:wait}
+select,input{min-height:44px;padding:0 10px;border:1px solid var(--rule);border-radius:6px;background:var(--bg)}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav a{flex:none;padding:10px 14px;color:var(--mute);text-decoration:none;border-bottom:3px solid transparent;font-size:15px}
+nav a.on{color:var(--ink);border-color:var(--ink);font-weight:600}
+section.view{display:none;padding-block:22px 48px}
+section.view.on{display:block}
+.lede{color:var(--mute);margin:0 0 18px;max-width:70ch}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:20px}
+.fg{background:var(--bg);padding:12px 14px}
+.fg b{display:block;font-size:clamp(20px,2.4vw,26px);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.2}
+.fg small{color:var(--mute);font-size:13px}
+.mix{display:flex;height:10px;border-radius:2px;overflow:hidden;margin-top:8px;background:var(--panel)}
+.mix i{display:block;height:100%}
+.main{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px;align-items:stretch}
+.panel{border:1px solid var(--rule);border-radius:8px;padding:14px}
+.fig{position:relative;min-height:420px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.fig.sm{min-height:260px}
+svg text{font:13px Literata,Georgia,serif;fill:var(--mute);paint-order:stroke;stroke:var(--bg);stroke-width:4px}
+.chead{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin-bottom:6px}
+.chead b{font-size:20px}
+.key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--mute)}
+.key i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px}
+.list{display:flex;flex-direction:column;gap:8px}
+.sig{border:1px solid var(--rule);border-radius:6px;padding:10px 12px;cursor:pointer;background:var(--bg);text-align:left;min-height:auto;display:block;width:100%}
+.sig:hover{background:var(--panel)}
+.sig .r1{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.sig .r2{font-size:13px;color:var(--mute);font-variant-numeric:tabular-nums;margin-top:4px}
+.pill{display:inline-block;font-size:13px;padding:1px 8px;border-radius:20px;white-space:nowrap;border:1px solid currentColor}
+.pill.TF{color:var(--tf);background:var(--tfbg);border-color:transparent}
+.pill.MR{color:var(--mr);background:var(--mrbg);border-color:transparent}
+.pill.Uptrend{color:var(--tf)}
+.pill.Range{color:var(--mr)}
+.pill.Downtrend,.pill.Transition{color:var(--mute)}
+.bar{height:5px;background:var(--panel);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%}
+.empty{color:var(--mute);padding:18px;border:1px dashed var(--rule);border-radius:6px;font-size:15px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-weight:600;text-align:left;color:var(--mute);border-bottom:1px solid var(--ink);padding:8px 8px;white-space:nowrap}
+td{border-bottom:1px solid var(--rule);padding:8px 8px;white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--panel)}
+.bar-row{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:16px}
+.bar-row label{display:flex;flex-direction:column;font-size:13px;color:var(--mute);gap:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{min-height:36px;font-size:14px;border-color:var(--rule)}
+.chips button.on{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.play{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:28px;border-top:1px solid var(--rule);padding-top:20px}
+.play p,.play li{font-size:15px;margin:0 0 6px}
+.play ul{padding-left:18px;margin:0}
+.play h3.tf{color:var(--tf)}
+.play h3.mr{color:var(--mr)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 20px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--mute)}
+.form label.cb{flex-direction:row;align-items:center;gap:10px;color:var(--ink)}
+.form input[type=checkbox]{width:22px;height:22px;min-height:0}
+fieldset{border:1px solid var(--rule);border-radius:8px;padding:14px 16px 18px;margin:0 0 16px}
+legend{font-weight:600;padding:0 6px}
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.big{font-size:clamp(34px,5vw,52px);font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto auto;gap:6px 18px;font-size:15px;margin-top:12px}
+.kv span:nth-child(2n){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:14px;color:var(--mute);margin-top:12px}
+.warnbox{border-left:3px solid var(--warn);padding:8px 12px;background:var(--panel);font-size:14px;margin:0 0 16px}
+.alert{border-bottom:1px solid var(--rule);padding:10px 0;font-size:15px;font-variant-numeric:tabular-nums}
+.alert small{color:var(--mute);display:block}
+.prog{height:3px;background:var(--panel);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--tf);transition:width .3s}
+@media(prefers-reduced-motion:reduce){.prog i{transition:none}}
+@media(max-width:900px){.main{grid-template-columns:minmax(0,1fr)}.play{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.calc{grid-template-columns:minmax(0,1fr)}.fig{min-height:340px}table{font-size:13px}th,td{padding:6px 5px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <h1>Tradesys Edge Dual<span>Trend following + mean reversion · Binance spot · long-only signals</span></h1>
+    <div class="grow"></div>
+    <div class="status"><span class="dot" id="dot"></span><span id="stxt">Starting…</span></div>
+    <select id="qtf" aria-label="Scan timeframe"><option value="1h">1h</option><option value="4h">4h</option><option value="1d">1d</option></select>
+    <button class="pri" id="scanBtn">Scan now</button>
+  </div>
+  <div class="prog"><i id="prog"></i></div>
+  <div class="wrap"><nav id="nav">
+    <a href="#dashboard" data-v="dashboard">Dashboard</a><a href="#scanner" data-v="scanner">Scanner</a><a href="#chart" data-v="chart">Chart</a><a href="#backtest" data-v="backtest">Backtest</a><a href="#risk" data-v="risk">Risk</a><a href="#alerts" data-v="alerts">Alerts</a><a href="#config" data-v="config">Config</a>
+  </nav></div>
+</header>
+
+<main class="wrap">
+<section class="view" id="v-dashboard">
+  <h2 id="finding">Scanning the market…</h2>
+  <p class="lede" id="findsub">The regime router reads ADX and the EMA 50/200 structure, then sends each pair to the trend-following or mean-reversion playbook.</p>
+  <div class="figs" id="figs"></div>
+  <div class="main">
+    <div class="panel">
+      <div class="chead"><b id="dSym">—</b><span id="dInfo" class="key"></span></div>
+      <div class="fig" id="dFig"><svg></svg></div>
+      <div class="key" style="margin-top:8px"><span><i style="background:var(--tf);opacity:.55"></i>EMA 20</span><span><i style="background:var(--tf)"></i>EMA 50</span><span><i style="background:var(--ink)"></i>EMA 200</span><span><i style="background:var(--mr);opacity:.5"></i>Bollinger 20,2</span><span>▲ trend signal</span><span style="color:var(--mr)">● reversion signal</span></div>
+    </div>
+    <div>
+      <h3>Top setups</h3>
+      <div class="list" id="topList"></div>
+    </div>
+  </div>
+  <div class="play">
+    <div><h3>Regime router</h3>
+      <ul><li>ADX ≥ 25 with price and EMA 50 above EMA 200 → <b>Uptrend</b>, trend playbook</li><li>ADX ≤ 20 → <b>Range</b>, reversion playbook</li><li>Between, or below EMA 200 → stand aside (reversion only above EMA 200)</li><li>BTC daily below EMA 200 flags trend longs as risk-off</li></ul></div>
+    <div><h3 class="tf">Trend following</h3>
+      <ul><li><b>Breakout:</b> close above prior 20-bar high, EMA 20 &gt; 50 &gt; 200, ADX rising, volume ≥ 1.5× average</li><li><b>Pullback:</b> dip to EMA 20 that closes back above it, RSI 14 between 40 and 60</li><li>Stop 2× ATR; trail 3× ATR from the high (chandelier); exit on close below EMA 50</li></ul></div>
+    <div><h3 class="mr">Mean reversion</h3>
+      <ul><li>Price above EMA 200, ADX below 25</li><li>Z-score(20) ≤ −2 or close below the lower band, and RSI 2 ≤ 10</li><li>Stop 1.5× ATR; target is the 20-bar mean; exit on RSI 2 &gt; 70 or after 10 bars</li></ul></div>
+  </div>
+</section>
+
+<section class="view" id="v-scanner">
+  <h2>Scanner</h2>
+  <div class="bar-row">
+    <label>Universe<select id="sMode"><option value="watch">Watchlist</option><option value="all">All USDT pairs (top by volume)</option></select></label>
+    <div class="chips" id="sFilter"><button data-f="sig" class="on">Signals</button><button data-f="TF">Trend</button><button data-f="MR">Reversion</button><button data-f="all">All pairs</button></div>
+  </div>
+  <div class="scroll"><table id="sTable"></table></div>
+  <p class="note" id="sNote"></p>
+</section>
+
+<section class="view" id="v-chart">
+  <h2>Chart</h2>
+  <div class="bar-row">
+    <label>Pair<input id="cSym" value="BTCUSDT" size="12" autocomplete="off" spellcheck="false"></label>
+    <label>Timeframe<select id="cTf"><option>1h</option><option selected>4h</option><option>1d</option></select></label>
+    <button id="cLoad">Load</button>
+  </div>
+  <div class="panel">
+    <div class="chead"><b id="cTitle">—</b><span id="cInfo" class="key"></span></div>
+    <div class="fig" id="cFig" style="min-height:520px"><svg></svg></div>
+  </div>
+  <div class="scroll" style="margin-top:16px"><table id="cHist"></table></div>
+</section>
+
+<section class="view" id="v-backtest">
+  <h2>Backtest</h2>
+  <p class="warnbox">Results describe the past only and are shown for information; they are not a condition for any trade. Entries fill at the next bar's open, with fees and slippage from Config. Signals use closed bars only.</p>
+  <div class="bar-row">
+    <label>Pair<input id="bSym" value="ETHUSDT" size="12" autocomplete="off" spellcheck="false"></label>
+    <label>Timeframe<select id="bTf"><option>1h</option><option selected>4h</option><option>1d</option></select></label>
+    <label>History<select id="bN"><option value="1000">1,000 bars</option><option value="2000" selected>2,000 bars</option><option value="3000">3,000 bars</option></select></label>
+    <label>Playbook<select id="bMode"><option value="both">Router (both)</option><option value="tf">Trend only</option><option value="mr">Reversion only</option></select></label>
+    <button class="pri" id="bRun">Run backtest</button>
+  </div>
+  <div id="bOut"><div class="empty">Choose a pair and run the backtest.</div></div>
+</section>
+
+<section class="view" id="v-risk">
+  <h2>Position sizing</h2>
+  <div class="calc">
+    <div class="panel form" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <label>Pair<input id="rSym" value="SOLUSDT"></label>
+      <label>Equity (USDT)<input id="rEq" type="number" step="any"></label>
+      <label>Risk per trade %<input id="rRisk" type="number" step="0.1"></label>
+      <label>Max allocation %<input id="rAlloc" type="number" step="1" value="25"></label>
+      <label>Entry<input id="rEntry" type="number" step="any" value="150"></label>
+      <label>Stop<input id="rStop" type="number" step="any" value="144"></label>
+    </div>
+    <div class="panel">
+      <small style="color:var(--mute)">Buy quantity</small>
+      <div class="big" id="rQty">—</div>
+      <div class="kv" id="rKv"></div>
+      <p class="note" id="rNote"></p>
+    </div>
+  </div>
+  <h3 style="margin-top:28px">Portfolio rules</h3>
+  <div class="scroll"><table id="rRules"></table></div>
+</section>
+
+<section class="view" id="v-alerts">
+  <h2>Alerts</h2>
+  <p class="lede">Each new signal is logged once per pair, playbook and bar. With Telegram switched on in Config, new live signals are also sent to your bot. Demo signals are never sent.</p>
+  <div class="bar-row"><button id="aTest">Send test to Telegram</button><button id="aCopy">Copy all</button><button id="aClear">Clear log</button><label>Auto-scan while open<select id="aAuto"><option value="0">Off</option><option value="1">Every 1 hour</option><option value="4">Every 4 hours</option></select></label></div>
+  <div id="aList"></div>
+</section>
+
+<section class="view" id="v-config">
+  <h2>Configuration</h2>
+  <form id="cfgForm">
+    <fieldset><legend>Universe</legend><div class="form">
+      <label style="grid-column:1/-1">Watchlist (comma separated)<input id="k_watch"></label>
+      <label>Top pairs in all-USDT mode<input id="k_topN" type="number"></label>
+      <label>Min 24h quote volume (USDT)<input id="k_minVol" type="number"></label>
+    </div></fieldset>
+    <fieldset><legend>Data and alerts</legend><div class="form">
+      <label>Binance endpoint<select id="k_endpoint"><option value="https://data-api.binance.vision">data-api.binance.vision (market data)</option><option value="https://api.binance.com">api.binance.com</option><option value="https://api1.binance.com">api1.binance.com</option><option value="https://api.binance.us">api.binance.us (US)</option></select></label>
+      <label>Telegram bot token<input id="k_tgToken" type="password" autocomplete="off" placeholder="123456:ABC…"></label>
+      <label>Telegram chat ID<input id="k_tgChat" autocomplete="off" placeholder="e.g. 123456789"></label>
+      <label class="cb"><input id="k_tgOn" type="checkbox">Send new live signals to Telegram</label>
+    </div><p class="note">The token is stored only in this browser (localStorage). Use a bot made for alerts only.</p></fieldset>
+    <fieldset><legend>Regime router</legend><div class="form">
+      <label>ADX trend threshold<input id="k_adxTrend" type="number" step="1"></label>
+      <label>ADX range threshold<input id="k_adxRange" type="number" step="1"></label>
+      <label class="cb"><input id="k_btcBlock" type="checkbox">Block trend longs when BTC daily is risk-off</label>
+    </div></fieldset>
+    <fieldset><legend>Trend following</legend><div class="form">
+      <label>Donchian breakout length<input id="k_donchian" type="number"></label>
+      <label>Volume multiple<input id="k_volMult" type="number" step="0.1"></label>
+      <label>Initial stop (× ATR)<input id="k_tfAtr" type="number" step="0.1"></label>
+      <label>Chandelier trail (× ATR)<input id="k_trailAtr" type="number" step="0.1"></label>
+    </div></fieldset>
+    <fieldset><legend>Mean reversion</legend><div class="form">
+      <label>Z-score trigger (−)<input id="k_mrZ" type="number" step="0.1"></label>
+      <label>RSI 2 trigger (≤)<input id="k_mrRsi2" type="number" step="1"></label>
+      <label>Stop (× ATR)<input id="k_mrAtr" type="number" step="0.1"></label>
+      <label>Time stop (bars)<input id="k_mrMaxBars" type="number"></label>
+      <label>Min reward:risk to mean<input id="k_minRR" type="number" step="0.1"></label>
+      <label class="cb"><input id="k_mrRequireE200" type="checkbox">Only above EMA 200</label>
+    </div></fieldset>
+    <fieldset><legend>Risk and costs</legend><div class="form">
+      <label>Equity (USDT)<input id="k_equity" type="number"></label>
+      <label>Risk per trade %<input id="k_risk" type="number" step="0.1"></label>
+      <label>Max open positions<input id="k_maxPos" type="number"></label>
+      <label>Max portfolio heat %<input id="k_maxHeat" type="number" step="0.5"></label>
+      <label>Fee per side %<input id="k_fee" type="number" step="0.01"></label>
+      <label>Slippage per side %<input id="k_slip" type="number" step="0.01"></label>
+    </div></fieldset>
+    <div class="bar-row"><button class="pri" type="submit">Save and rescan</button><button type="button" id="cfgReset">Reset defaults</button><span id="cfgMsg" class="note"></span></div>
+  </form>
+</section>
+</main>
+
+<script>
+{
+//ENGINE-START
+const clamp=(x,lo=0,hi=1)=>Math.max(lo,Math.min(hi,isNaN(x)?lo:x));
+function sma(s,n){const o=new Array(s.length).fill(NaN);let sum=0;for(let i=0;i<s.length;i++){sum+=s[i];if(i>=n)sum-=s[i-n];if(i>=n-1)o[i]=sum/n}return o}
+function ema(s,n){const o=new Array(s.length).fill(NaN),k=2/(n+1);let p=NaN,sum=0;for(let i=0;i<s.length;i++){if(i<n-1){sum+=s[i];continue}if(i===n-1){sum+=s[i];p=sum/n}else p=s[i]*k+p*(1-k);o[i]=p}return o}
+function stdev(s,n){const o=new Array(s.length).fill(NaN);for(let i=n-1;i<s.length;i++){let m=0;for(let j=i-n+1;j<=i;j++)m+=s[j];m/=n;let v=0;for(let j=i-n+1;j<=i;j++)v+=(s[j]-m)**2;o[i]=Math.sqrt(v/n)}return o}
+function rma(s,n){const o=new Array(s.length).fill(NaN);const st=s.findIndex(x=>!isNaN(x));if(st<0)return o;let sum=0,p=NaN;for(let i=st;i<s.length;i++){if(i<st+n-1){sum+=s[i];continue}if(i===st+n-1){sum+=s[i];p=sum/n}else p=(p*(n-1)+s[i])/n;o[i]=p}return o}
+function rsi(c,n){const g=c.map((x,i)=>i?Math.max(x-c[i-1],0):NaN),d=c.map((x,i)=>i?Math.max(c[i-1]-x,0):NaN);const ag=rma(g,n),al=rma(d,n);return ag.map((a,i)=>isNaN(a)?NaN:al[i]===0?100:100-100/(1+a/al[i]))}
+function trueRange(h,l,c){return c.map((x,i)=>i?Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])):h[i]-l[i])}
+function atr(h,l,c,n){return rma(trueRange(h,l,c),n)}
+function adx(h,l,c,n){const pdm=[NaN],mdm=[NaN],tr=trueRange(h,l,c).map((x,i)=>i?x:NaN);for(let i=1;i<c.length;i++){const u=h[i]-h[i-1],d=l[i-1]-l[i];pdm.push(u>d&&u>0?u:0);mdm.push(d>u&&d>0?d:0)}const sp=rma(pdm,n),sm=rma(mdm,n),st=rma(tr,n);const dx=sp.map((p,i)=>{if(isNaN(p)||!st[i])return NaN;const pd=100*p/st[i],md=100*sm[i]/st[i];return pd+md===0?0:100*Math.abs(pd-md)/(pd+md)});return rma(dx,n)}
+function donch(h,n){return h.map((x,i)=>{if(i<n)return NaN;let m=-Infinity;for(let j=i-n;j<i;j++)m=Math.max(m,h[j]);return m})}
+function compute(b,cfg){const c=b.map(x=>x.c),h=b.map(x=>x.h),l=b.map(x=>x.l),o=b.map(x=>x.o),v=b.map(x=>x.v);const s20=sma(c,20),sd=stdev(c,20);
+ return{b,c,h,l,o,v,n:b.length,e20:ema(c,20),e50:ema(c,50),e200:ema(c,200),s20,sd,r14:rsi(c,14),r2:rsi(c,2),at:atr(h,l,c,14),dx:adx(h,l,c,14),vs:sma(v,20),dch:donch(h,cfg.donchian),bbU:s20.map((m,i)=>m+2*sd[i]),bbL:s20.map((m,i)=>m-2*sd[i])}}
+function evalAt(I,i,cfg,ctx){
+ const c=I.c[i],a=I.dx[i],e20=I.e20[i],e50=I.e50[i],e200=I.e200[i],at=I.at[i];
+ if(i<3||[a,e200,at,I.sd[i],I.dx[i-3]].some(isNaN))return null;
+ const up=c>e200&&e50>e200,dn=c<e200&&e50<e200;
+ const regime=a>=cfg.adxTrend&&up?'Uptrend':a>=cfg.adxTrend&&dn?'Downtrend':a<=cfg.adxRange?'Range':'Transition';
+ const ret20=i>=20?c/I.c[i-20]-1:0,rs=ret20-(ctx?ctx.btcRet20:0),z=I.sd[i]?(c-I.s20[i])/I.sd[i]:0;
+ const out={regime,adx:a,z,rsi2:I.r2[i],rsi14:I.r14[i],rs,price:c,atr:at,sig:null,t:I.b[i].t};
+ const stack=e20>e50&&e50>e200&&c>e200;
+ if(a>=cfg.adxTrend&&stack){
+  const rising=a>I.dx[i-3],volOk=I.v[i]>=cfg.volMult*I.vs[i];let setup=null;
+  if(c>I.dch[i]&&rising&&volOk)setup='Breakout';
+  else if(I.l[i]<=e20*1.005&&c>e20&&I.r14[i]>=40&&I.r14[i]<=60&&c>I.o[i])setup='Pullback';
+  if(setup){const stop=c-cfg.tfAtr*at,target=c+2*(c-stop);const riskOff=ctx&&!ctx.btcRiskOn;
+   let sc=clamp((a-20)/20)*30+20+clamp(I.v[i]/I.vs[i]/3)*15+(ctx?clamp((rs+0.1)/0.2)*20:10)+15*(1-clamp(((c-e20)/at-1)/3));if(riskOff)sc-=15;
+   if(!(riskOff&&cfg.btcBlock))out.sig={strat:'TF',setup,entry:c,stop,target,rr:2,score:Math.round(clamp(sc,0,100)),note:riskOff?'BTC risk-off':''}}}
+ if(!out.sig&&a<cfg.adxTrend&&(!cfg.mrRequireE200||c>e200)){
+  const r2=I.r2[i];
+  if((z<=-cfg.mrZ||c<I.bbL[i])&&r2<=cfg.mrRsi2){const stop=c-cfg.mrAtr*at,target=I.s20[i],rr=(target-c)/(c-stop);
+   if(rr>=cfg.minRR){const sc=clamp((-z-1.5)/1.5)*30+clamp((15-r2)/15)*25+clamp((30-a)/15)*15+(c>e200?15:0)+clamp(rr/2)*15;
+    out.sig={strat:'MR',setup:z<=-cfg.mrZ?'Z-score fade':'Band fade',entry:c,stop,target,rr,score:Math.round(sc),note:''}}}}
+ return out}
+function backtest(I,cfg,mode){
+ const n=I.n,fee=cfg.fee/100,slip=cfg.slip/100,risk=cfg.risk/100,start=Math.min(210,n-1);
+ let eq=1,pos=null,pend=null,exitPend=null,inBars=0;const trades=[],curve=[];
+ const closeAt=(i,px,why)=>{const ex=px*(1-slip),ret=ex*(1-fee)/(pos.entry*(1+fee))-1;eq*=1+pos.frac*ret;trades.push({strat:pos.strat,setup:pos.setup,t0:I.b[pos.i0].t,t1:I.b[i].t,entry:pos.entry,exit:ex,ret:pos.frac*ret,R:(ex*(1-fee)-pos.entry*(1+fee))/(pos.entry-pos.stop0),bars:i-pos.i0+1,why});pos=null};
+ for(let i=start;i<n;i++){
+  const o=I.o[i],h=I.h[i],l=I.l[i],c=I.c[i];
+  if(exitPend&&pos){closeAt(i,o,exitPend)}exitPend=null;
+  if(pend&&!pos){const entry=o*(1+slip),dist=pend.entry-pend.stop,stop=entry-dist;
+   if(dist>0)pos={strat:pend.strat,setup:pend.setup,i0:i,entry,stop,stop0:stop,target:pend.strat==='MR'?pend.target:null,frac:Math.min(risk/(dist/entry),1),hh:h}}
+  pend=null;
+  if(pos){if(o<=pos.stop)closeAt(i,o,'Stop (gap)');else if(l<=pos.stop)closeAt(i,pos.stop,pos.stop>pos.stop0?'Trailing stop':'Stop');else if(pos.target&&h>=pos.target)closeAt(i,Math.max(pos.target,o),'Mean target')}
+  if(pos){pos.hh=Math.max(pos.hh,h);inBars++;
+   if(pos.strat==='TF'){const tr=pos.hh-cfg.trailAtr*I.at[i];if(tr>pos.stop)pos.stop=tr;if(c<I.e50[i])exitPend='Close < EMA 50'}
+   else if(I.r2[i]>=70)exitPend='RSI 2 > 70';else if(i-pos.i0+1>=cfg.mrMaxBars)exitPend='Time stop'}
+  if(!pos&&i<n-1){const ev=evalAt(I,i,cfg,null);if(ev&&ev.sig&&(mode==='both'||mode===ev.sig.strat.toLowerCase()))pend=ev.sig}
+  const mtm=pos?eq*(1+pos.frac*(c*(1-slip)*(1-fee)/(pos.entry*(1+fee))-1)):eq;
+  curve.push({t:I.b[i].t,eq:mtm,bh:c/I.c[start]})}
+ if(pos)closeAt(n-1,I.c[n-1],'Open at end');
+ if(curve.length)curve[curve.length-1].eq=eq;
+ let peak=0,dd=0;for(const p of curve){peak=Math.max(peak,p.eq);dd=Math.max(dd,1-p.eq/peak)}
+ const w=trades.filter(t=>t.R>0),ls=trades.filter(t=>t.R<=0),gw=w.reduce((s,t)=>s+t.R,0),gl=-ls.reduce((s,t)=>s+t.R,0);
+ return{trades,curve,stats:{n:trades.length,win:trades.length?w.length/trades.length:0,pf:gl?gw/gl:(gw?Infinity:0),avgR:trades.length?(gw-gl)/trades.length:0,ret:eq-1,dd,bh:curve.length?curve[curve.length-1].bh-1:0,exp:curve.length?inBars/curve.length:0,tf:trades.filter(t=>t.strat==='TF').length,mr:trades.filter(t=>t.strat==='MR').length}}}
+function rng(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
+function hashStr(str){let h=7;for(const ch of str)h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)+1}
+const TFMS={'1h':36e5,'4h':144e5,'1d':864e5};
+const DEMO_BASE={BTCUSDT:60000,ETHUSDT:1700,SOLUSDT:140,BNBUSDT:560,XRPUSDT:0.55,ADAUSDT:0.38,AVAXUSDT:24,LINKUSDT:12,DOTUSDT:4.8,NEARUSDT:3.9,SUIUSDT:1.6,INJUSDT:16,ARBUSDT:0.6,OPUSDT:1.4,DOGEUSDT:0.11,TRXUSDT:0.16,LTCUSDT:68,ATOMUSDT:5.2,APTUSDT:6.5,FETUSDT:0.9};
+function demoBars(sym,tf,n,now){const r=rng(hashStr(sym+tf)),ms=TFMS[tf]||TFMS['4h'],sig=tf==='1d'?0.032:tf==='4h'?0.014:0.007;
+ let p=DEMO_BASE[sym]||(0.5+r()*40),drift=0,left=0;const end=Math.floor(now/ms)*ms-ms,out=[];
+ const gauss=()=>{const u=r()||1e-9,v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+ for(let k=n-1;k>=0;k--){if(left<=0){left=40+Math.floor(r()*120);const m=r();drift=m<0.4?sig*0.25:m<0.6?-sig*0.22:0}left--;
+  const o=p,ret=drift+sig*gauss()-(p/(DEMO_BASE[sym]||p)-1)*0.002;const c=Math.max(o*(1+ret),1e-8);
+  const h=Math.max(o,c)*(1+Math.abs(gauss())*sig*0.5),l=Math.min(o,c)*(1-Math.abs(gauss())*sig*0.5);
+  out.push({t:end-k*ms,o,h,l,c,v:(1+r()*1.5+Math.abs(ret)/sig)*1000,ct:end-k*ms+ms-1});p=c}
+ return out}
+//ENGINE-END
+
+const DEF={tf:'4h',mode:'watch',watch:'BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,NEARUSDT,SUIUSDT,INJUSDT,ARBUSDT,OPUSDT,DOGEUSDT,TRXUSDT,LTCUSDT,ATOMUSDT,APTUSDT,FETUSDT',topN:40,minVol:5000000,adxTrend:25,adxRange:20,volMult:1.5,donchian:20,tfAtr:2,trailAtr:3,mrZ:2,mrRsi2:10,mrAtr:1.5,mrMaxBars:10,mrRequireE200:true,minRR:0.8,btcBlock:false,equity:10000,risk:1,maxPos:5,maxHeat:6,fee:0.1,slip:0.05,auto:0,endpoint:'https://data-api.binance.vision',tgOn:false,tgToken:'',tgChat:''};
+const LS={get(k,d){try{const v=localStorage.getItem('tsed_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('tsed_'+k,JSON.stringify(v))}catch(e){}}};
+let cfg={...DEF,...LS.get('cfg',{})};
+const S={results:[],cache:{},btc:null,filter:'sig',alerts:LS.get('alerts',[]),lastScan:0,busy:false,dSym:null};
+let live=false,liveErr='';
+async function sendTg(text){if(!cfg.tgToken||!cfg.tgChat)throw new Error('Set bot token and chat ID in Config');
+ const r=await fetch('https://api.telegram.org/bot'+encodeURIComponent(cfg.tgToken)+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:cfg.tgChat,text:text.slice(0,4000),disable_web_page_preview:true})});
+ const j=await r.json().catch(()=>({}));if(!j.ok)throw new Error(j.description||('HTTP '+r.status));return j}
+const $=id=>document.getElementById(id);
+const fmtP=p=>!isFinite(p)?'—':p>=1000?p.toLocaleString('en-US',{maximumFractionDigits:2}):p>=1?p.toFixed(4):p.toPrecision(5);
+const pct=(x,d=1)=>!isFinite(x)?'—':(x>0?'+':'')+(x*100).toFixed(d)+'%';
+const tstr=t=>new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+
+async function api(path,params){const q=new URLSearchParams(params).toString();const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),15000);
+ try{const r=await fetch(cfg.endpoint+path+(q?'?'+q:''),{signal:ctl.signal});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error((j&&j.msg)||('HTTP '+r.status));return j}
+ catch(e){throw new Error(e.name==='AbortError'?'Request timed out':e.message)}finally{clearTimeout(to)}}
+async function probeLive(){try{await api('/api/v3/ping',{});live=true;liveErr=''}catch(e){live=false;liveErr=e.message}return live}
+async function getKlines(sym,tf,n){
+ if(!live)return demoBars(sym,tf,n,Date.now());
+ let out=[],end=null;
+ while(out.length<n){const lim=Math.min(1000,n-out.length+1);const inp={symbol:sym,interval:tf,limit:lim};if(end)inp.endTime=end;
+  const raw=await api('/api/v3/klines',inp);if(!Array.isArray(raw))throw new Error(typeof raw==='object'&&raw&&raw.msg?raw.msg:'Unexpected kline payload');if(!raw.length)break;
+  const bars=raw.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[7],ct:+k[6]}));
+  out=bars.concat(out.filter(b=>b.t>bars[bars.length-1].t));end=bars[0].t-1;if(raw.length<lim)break}
+ return out.filter(b=>b.ct<Date.now())}
+const STABLE=/^(USDC|FDUSD|TUSD|DAI|USDP|BUSD|EUR|AEUR|EURI|PYUSD|USD1|XUSD|USDE|BFUSD|GBP)USDT$/;
+async function universe(){
+ if(cfg.mode!=='all')return cfg.watch.split(/[\s,]+/).map(s=>s.trim().toUpperCase()).filter(Boolean).map(s=>s.endsWith('USDT')?s:s+'USDT');
+ if(!live)return Object.keys(DEMO_BASE);
+ const all=await api('/api/v3/ticker/24hr',{type:'MINI'});if(!Array.isArray(all))throw new Error('Ticker list unavailable');
+ return all.filter(t=>t.symbol.endsWith('USDT')&&!STABLE.test(t.symbol)&&!/(UP|DOWN|BULL|BEAR)USDT$/.test(t.symbol)&&+t.quoteVolume>=cfg.minVol).sort((a,b)=>b.quoteVolume-a.quoteVolume).slice(0,cfg.topN).map(t=>t.symbol)}
+async function pool(items,k,fn){let idx=0;const run=async()=>{while(idx<items.length){const it=items[idx++];try{await fn(it)}catch(e){S.errs.push(it+': '+(e.message||e.code||e))}}};await Promise.all(Array.from({length:k},run))}
+
+function setStatus(msg){$('dot').className='dot'+(live?' live':'');$('stxt').textContent=msg||(live?'Live · Binance public API':'Demo data · Binance unreachable'+(liveErr?' ('+liveErr+')':''))+(S.lastScan?' · scanned '+tstr(S.lastScan):'')}
+async function scan(){
+ if(S.busy)return;S.busy=true;S.errs=[];$('scanBtn').disabled=true;const prog=$('prog');prog.style.width='4%';setStatus('Scanning '+cfg.tf+'…');
+ try{
+  const bd=await getKlines('BTCUSDT','1d',300),Id=compute(bd,cfg),i=Id.n-1;
+  const bt=await getKlines('BTCUSDT',cfg.tf,300),It=compute(bt,cfg),j=It.n-1;
+  S.btc={price:bt[j].c,chg:bd[i].c/bd[i-1].c-1,riskOn:bd[i].c>Id.e200[i]&&Id.e50[i]>Id.e200[i],aboveE200:bd[i].c>Id.e200[i],ret20:It.c[j]/It.c[j-20]-1,adx:Id.dx[i]};
+  const ctx={btcRiskOn:S.btc.riskOn,btcRet20:S.btc.ret20};
+  const syms=await universe();let done=0;const res=[];
+  await pool(syms,4,async sym=>{const bars=sym==='BTCUSDT'?bt:await getKlines(sym,cfg.tf,300);if(bars.length<230)throw new Error('not enough history');
+   const I=compute(bars,cfg),ev=evalAt(I,I.n-1,cfg,ctx);S.cache[sym+cfg.tf]=I;if(ev)res.push({sym,...ev,chg:I.c[I.n-1]/I.c[Math.max(0,I.n-1-(cfg.tf==='1h'?24:cfg.tf==='4h'?6:1))]-1});done++;prog.style.width=(4+96*done/syms.length)+'%'});
+  S.results=res.sort((a,b)=>(b.sig?b.sig.score+100:0)-(a.sig?a.sig.score+100:0)||b.adx-a.adx);S.lastScan=Date.now();S.scanTf=cfg.tf;
+  const fresh=[];
+  for(const r of res)if(r.sig){const key=r.sym+'|'+r.sig.strat+'|'+r.t+'|'+cfg.tf;if(!S.alerts.some(a=>a.key===key)){const a={key,at:Date.now(),sym:r.sym,tf:cfg.tf,demo:!live,...r.sig};S.alerts.unshift(a);fresh.push(a)}}
+  if(live&&cfg.tgOn&&fresh.length)sendTg(fresh.map(alertText).join('\n\n')).catch(e=>setStatus('Telegram failed: '+e.message));
+  S.alerts=S.alerts.slice(0,200);LS.set('alerts',S.alerts);
+  const top=S.results.find(r=>r.sig);S.dSym=top?top.sym:'BTCUSDT';
+  setStatus();renderAll()
+ }catch(e){setStatus('Scan failed: '+(e.message||e))}
+ finally{S.busy=false;$('scanBtn').disabled=false;setTimeout(()=>prog.style.width='0',600)}}
+
+/* ---------- chart ---------- */
+const figs=new Map();
+const ro=new ResizeObserver(es=>{for(const e of es){const d=figs.get(e.target);if(d)drawChart(e.target,d)}});
+function plot(el,data){figs.set(el,data);if(!el.dataset.obs){ro.observe(el);el.dataset.obs=1}drawChart(el,data)}
+function drawChart(el,d){
+ const s=el.querySelector('svg'),W=el.clientWidth,H=el.clientHeight;if(!W||!H||!d)return;
+ if(d.kind==='eq')return drawEq(s,W,H,d);
+ const I=d.I,cnt=Math.min(I.n,W<520?70:W<800?110:150),a0=I.n-cnt,L=6,R=W<520?58:72,T=10,B=22,ph=Math.round((H-T-B)*0.76),aTop=T+ph+14,ah=H-B-aTop;
+ let lo=Infinity,hi=-Infinity;for(let i=a0;i<I.n;i++){lo=Math.min(lo,I.l[i],I.bbL[i]||Infinity);hi=Math.max(hi,I.h[i],I.bbU[i]||-Infinity)}
+ const sg=d.sig;if(sg){lo=Math.min(lo,sg.stop);hi=Math.max(hi,sg.target)}const pad=(hi-lo)*0.04;lo-=pad;hi+=pad;
+ const cw=(W-L-R)/cnt,x=i=>L+(i-a0+0.5)*cw,y=p=>T+(hi-p)/(hi-lo)*ph,bw=Math.max(1,cw*0.62);
+ let g='';const step=(hi-lo)/4;
+ for(let k=0;k<=4;k++){const p=lo+step*k,yy=y(p);g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--rule)"/><text x="${W-R+6}" y="${yy+4}">${fmtP(p)}</text>`}
+ const line=(arr,col,w,extra='')=>{let p='';for(let i=a0;i<I.n;i++){if(isNaN(arr[i]))continue;p+=(p?'L':'M')+x(i).toFixed(1)+','+y(arr[i]).toFixed(1)}return`<path d="${p}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`};
+ g+=line(I.bbU,'var(--mr)',1,'opacity=".45"')+line(I.bbL,'var(--mr)',1,'opacity=".45"')+line(I.e20,'var(--tf)',1.2,'opacity=".55"')+line(I.e50,'var(--tf)',1.8)+line(I.e200,'var(--ink)',1.6,'stroke-dasharray="5 3"');
+ for(let i=a0;i<I.n;i++){const up=I.c[i]>=I.o[i],xx=x(i),yo=y(I.o[i]),yc=y(I.c[i]);
+  g+=`<line x1="${xx}" x2="${xx}" y1="${y(I.h[i])}" y2="${y(I.l[i])}" stroke="var(--ink)"/><rect x="${xx-bw/2}" y="${Math.min(yo,yc)}" width="${bw}" height="${Math.max(1,Math.abs(yc-yo))}" fill="${up?'var(--bg)':'var(--ink)'}" stroke="var(--ink)"/>`}
+ if(d.marks)for(const m of d.marks){if(m.i<a0)continue;const xx=x(m.i),yy=y(I.l[m.i])+12;g+=m.strat==='TF'?`<path d="M${xx},${yy-5}l5,9h-10z" fill="var(--tf)"/>`:`<circle cx="${xx}" cy="${yy}" r="4.5" fill="var(--mr)"/>`}
+ if(sg){for(const [p,lab,col] of [[sg.entry,'Entry','var(--ink)'],[sg.stop,'Stop','var(--mr)'],[sg.target,sg.strat==='MR'?'Mean':'2R','var(--tf)']]){const yy=y(p);g+=`<line x1="${x(I.n-1)-cw*12}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="${col}" stroke-dasharray="3 3"/><text x="${x(I.n-1)-cw*12}" y="${yy-5}" style="fill:${col}">${lab} ${fmtP(p)}</text>`}}
+ const ay=v=>aTop+(1-v/60)*ah;
+ g+=`<line x1="${L}" x2="${W-R}" y1="${aTop}" y2="${aTop}" stroke="var(--rule)"/>`;
+ for(const v of [cfg.adxRange,cfg.adxTrend])g+=`<line x1="${L}" x2="${W-R}" y1="${ay(v)}" y2="${ay(v)}" stroke="var(--rule)" stroke-dasharray="2 3"/><text x="${W-R+6}" y="${ay(v)+4}">${v}</text>`;
+ let ap='';for(let i=a0;i<I.n;i++){if(isNaN(I.dx[i]))continue;ap+=(ap?'L':'M')+x(i).toFixed(1)+','+ay(Math.min(60,I.dx[i])).toFixed(1)}
+ g+=`<path d="${ap}" fill="none" stroke="var(--ink)" stroke-width="1.4"/><text x="${L+4}" y="${aTop+14}">ADX 14 · ${I.dx[I.n-1].toFixed(1)}</text>`;
+ const tk=W<520?3:5;for(let k=0;k<tk;k++){const i=a0+Math.round((cnt-1)*(k+0.5)/tk);g+=`<text x="${x(i)}" y="${H-5}" text-anchor="middle">${new Date(I.b[i].t).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</text>`}
+ s.innerHTML=g}
+function drawEq(s,W,H,d){const c=d.curve,L=8,R=64,T=12,B=22;if(c.length<2){s.innerHTML='';return}
+ let lo=Infinity,hi=-Infinity;for(const p of c){lo=Math.min(lo,p.eq,p.bh);hi=Math.max(hi,p.eq,p.bh)}const pad=(hi-lo)*0.06||0.01;lo-=pad;hi+=pad;
+ const x=i=>L+i/(c.length-1)*(W-L-R),y=v=>T+(hi-v)/(hi-lo)*(H-T-B);let g='';
+ for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4;g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)"/><text x="${W-R+6}" y="${y(v)+4}">${pct(v-1,0)}</text>`}
+ const path=k=>c.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+','+y(p[k]).toFixed(1)).join('');
+ g+=`<line x1="${L}" x2="${W-R}" y1="${y(1)}" y2="${y(1)}" stroke="var(--mute)"/><path d="${path('bh')}" fill="none" stroke="var(--mute)" stroke-dasharray="4 3" stroke-width="1.3"/><path d="${path('eq')}" fill="none" stroke="var(--tf)" stroke-width="2.2"/>`;
+ g+=`<text x="${W-R-4}" y="${y(c[c.length-1].eq)-8}" text-anchor="end" style="fill:var(--tf)">Strategy ${pct(c[c.length-1].eq-1)}</text><text x="${W-R-4}" y="${y(c[c.length-1].bh)+16}" text-anchor="end">Buy and hold ${pct(c[c.length-1].bh-1)}</text>`;
+ for(let k=0;k<3;k++){const i=Math.round((c.length-1)*(k+0.5)/3);g+=`<text x="${x(i)}" y="${H-5}" text-anchor="middle">${new Date(c[i].t).toLocaleDateString('en-GB',{month:'short',year:'2-digit'})}</text>`}
+ s.innerHTML=g}
+function marksFor(I,from){const m=[];for(let i=Math.max(from,210);i<I.n;i++){const ev=evalAt(I,i,cfg,null);if(ev&&ev.sig)m.push({i,strat:ev.sig.strat,t:I.b[i].t,...ev.sig,regime:ev.regime})}return m}
+
+/* ---------- render ---------- */
+function renderAll(){renderDash();renderScanner();renderAlerts();renderRules()}
+function renderDash(){
+ const r=S.results,sig=r.filter(x=>x.sig),tf=sig.filter(x=>x.sig.strat==='TF').length,mr=sig.length-tf,b=S.btc;
+ $('finding').textContent=sig.length?`${sig.length} setup${sig.length>1?'s':''} on ${S.scanTf}: ${tf} trend, ${mr} mean reversion`:`No setups on ${S.scanTf} right now — stand aside`;
+ $('findsub').textContent=b?`BTC daily is ${b.riskOn?'risk-on (above a rising EMA 200 structure)':'risk-off (below the EMA 200 structure)'} — trend longs are ${b.riskOn?'allowed':cfg.btcBlock?'blocked':'flagged'}. ${r.length} pairs scanned${live?'':', demo data'}.`:'';
+ const cnt=k=>r.filter(x=>x.regime===k).length,tot=r.length||1;
+ const mix=[['Uptrend','var(--tf)'],['Range','var(--mr)'],['Transition','var(--mute)'],['Downtrend','var(--rule)']];
+ $('figs').innerHTML=(b?`<div class="fg"><small>BTC</small><b>${fmtP(b.price)}</b><small>${pct(b.chg,2)} 1 day</small></div><div class="fg"><small>BTC daily regime</small><b style="color:${b.riskOn?'var(--tf)':'var(--mr)'}">${b.riskOn?'Risk-on':'Risk-off'}</b><small>ADX ${b.adx.toFixed(1)}</small></div>`:'')+
+  `<div class="fg"><small>Trend signals</small><b style="color:var(--tf)">${tf}</b><small>breakout + pullback</small></div><div class="fg"><small>Reversion signals</small><b style="color:var(--mr)">${mr}</b><small>z-score + band fade</small></div>`+
+  `<div class="fg"><small>Regime mix · ${r.length} pairs</small><div class="mix">${mix.map(([k,c])=>`<i style="width:${cnt(k)/tot*100}%;background:${c}" title="${k} ${cnt(k)}"></i>`).join('')}</div><small>${mix.map(([k])=>k+' '+cnt(k)).join(' · ')}</small></div>`;
+ $('topList').innerHTML=sig.length?sig.slice(0,7).map(x=>`<button class="sig" data-sym="${x.sym}"><div class="r1"><b>${x.sym.replace('USDT','')}</b><span class="pill ${x.sig.strat}">${x.sig.strat==='TF'?'Trend':'Reversion'} · ${x.sig.setup}</span></div><div class="bar"><i style="width:${x.sig.score}%;background:var(--${x.sig.strat.toLowerCase()})"></i></div><div class="r2">Score ${x.sig.score} · entry ${fmtP(x.sig.entry)} · stop ${fmtP(x.sig.stop)} · target ${fmtP(x.sig.target)}${x.sig.note?' · '+x.sig.note:''}</div></button>`).join(''):`<div class="empty">No pair meets either playbook on the last closed ${S.scanTf} bar. Waiting is a position.</div>`;
+ showDash(S.dSym)}
+function showDash(sym){const I=S.cache[sym+S.scanTf];if(!I)return;S.dSym=sym;const r=S.results.find(x=>x.sym===sym);
+ $('dSym').textContent=sym+' · '+S.scanTf;$('dInfo').innerHTML=r?`<span class="pill ${r.regime}">${r.regime}</span><span>ADX ${r.adx.toFixed(1)}</span><span>Z ${r.z.toFixed(2)}</span><span>RSI 2 ${r.rsi2.toFixed(0)}</span><span>RS vs BTC ${pct(r.rs)}</span>`:'';
+ plot($('dFig'),{I,sig:r&&r.sig,marks:marksFor(I,I.n-150)})}
+function renderScanner(){
+ const f=S.filter,rows=S.results.filter(r=>f==='all'||(f==='sig'?r.sig:r.sig&&r.sig.strat===f));
+ $('sTable').innerHTML=`<thead><tr><th>Pair</th><th class="n">Price</th><th class="n">Change</th><th>Regime</th><th>Signal</th><th class="n">Score</th><th class="n">Entry</th><th class="n">Stop</th><th class="n">Target</th><th class="n">R:R</th><th class="n">ADX</th><th class="n">RS vs BTC</th><th></th></tr></thead><tbody>`+
+ (rows.length?rows.map(r=>`<tr class="click" data-sym="${r.sym}"><td><b>${r.sym.replace('USDT','')}</b></td><td class="n">${fmtP(r.price)}</td><td class="n">${pct(r.chg)}</td><td><span class="pill ${r.regime}">${r.regime}</span></td><td>${r.sig?`<span class="pill ${r.sig.strat}">${r.sig.strat} · ${r.sig.setup}</span>${r.sig.note?' <small style="color:var(--warn)">'+r.sig.note+'</small>':''}`:'—'}</td><td class="n">${r.sig?r.sig.score:''}</td><td class="n">${r.sig?fmtP(r.sig.entry):''}</td><td class="n">${r.sig?fmtP(r.sig.stop):''}</td><td class="n">${r.sig?fmtP(r.sig.target):''}</td><td class="n">${r.sig?r.sig.rr.toFixed(2):''}</td><td class="n">${r.adx.toFixed(1)}</td><td class="n">${pct(r.rs)}</td><td>${r.sig?`<button class="sm" data-size="${r.sym}">Size</button>`:''}</td></tr>`).join(''):`<tr><td colspan="13"><div class="empty">Nothing matches this filter.</div></td></tr>`)+'</tbody>';
+ $('sNote').textContent=`${S.results.length} pairs · ${S.scanTf} · signals use the last closed bar${S.errs&&S.errs.length?' · skipped: '+S.errs.slice(0,5).join('; '):''}`}
+async function loadChart(){
+ const sym=$('cSym').value.trim().toUpperCase().replace(/^(?!.*USDT$)(.*)$/,'$1USDT'),tf=$('cTf').value;$('cSym').value=sym;$('cTitle').textContent=sym+' · '+tf+' · loading…';
+ try{const I=S.cache[sym+tf]&&S.cache[sym+tf].n>=500?S.cache[sym+tf]:compute(await getKlines(sym,tf,600),cfg);S.cache[sym+tf]=I;
+  const ev=evalAt(I,I.n-1,cfg,S.btc?{btcRiskOn:S.btc.riskOn,btcRet20:S.btc.ret20}:null),m=marksFor(I,I.n-150);
+  $('cTitle').textContent=sym+' · '+tf;$('cInfo').innerHTML=ev?`<span class="pill ${ev.regime}">${ev.regime}</span><span>Close ${fmtP(ev.price)}</span><span>ADX ${ev.adx.toFixed(1)}</span><span>RSI 14 ${ev.rsi14.toFixed(0)}</span><span>Z ${ev.z.toFixed(2)}</span><span>ATR ${fmtP(ev.atr)}</span>`:'';
+  plot($('cFig'),{I,sig:ev&&ev.sig,marks:m});
+  $('cHist').innerHTML=`<thead><tr><th>Bar</th><th>Signal</th><th>Regime</th><th class="n">Score</th><th class="n">Entry</th><th class="n">Stop</th><th class="n">Target</th></tr></thead><tbody>`+(m.length?m.slice().reverse().slice(0,15).map(s=>`<tr><td>${tstr(s.t)}</td><td><span class="pill ${s.strat}">${s.strat} · ${s.setup}</span></td><td>${s.regime}</td><td class="n">${s.score}</td><td class="n">${fmtP(s.entry)}</td><td class="n">${fmtP(s.stop)}</td><td class="n">${fmtP(s.target)}</td></tr>`).join(''):'<tr><td colspan="7"><div class="empty">No signals in the last 150 bars.</div></td></tr>')+'</tbody>'
+ }catch(e){$('cTitle').textContent=sym+' · '+(e.message||e.code||'failed to load')}}
+async function runBt(){
+ const sym=$('bSym').value.trim().toUpperCase().replace(/^(?!.*USDT$)(.*)$/,'$1USDT'),tf=$('bTf').value,n=+$('bN').value,mode=$('bMode').value;$('bSym').value=sym;
+ $('bRun').disabled=true;$('bOut').innerHTML='<div class="empty">Loading '+n+' bars of '+sym+' '+tf+'…</div>';
+ try{const bars=await getKlines(sym,tf,n);if(bars.length<300)throw new Error('Not enough history ('+bars.length+' bars)');const I=compute(bars,cfg),R=backtest(I,cfg,mode),st=R.stats;
+  const tile=(k,v,sub='')=>`<div class="fg"><small>${k}</small><b>${v}</b><small>${sub}</small></div>`;
+  $('bOut').innerHTML=`<h3>${sym} ${tf} · ${tstr(bars[210]?bars[210].t:bars[0].t)} to ${tstr(bars[bars.length-1].t)}${live?'':' · demo data'}</h3><div class="figs">${tile('Net return',pct(st.ret),'buy and hold '+pct(st.bh))+tile('Max drawdown',pct(-st.dd))+tile('Trades',st.n,st.tf+' trend · '+st.mr+' reversion')+tile('Win rate',(st.win*100).toFixed(0)+'%')+tile('Profit factor',isFinite(st.pf)?st.pf.toFixed(2):'∞','in R')+tile('Expectancy',(st.avgR>=0?'+':'')+st.avgR.toFixed(2)+'R','per trade')+tile('Time in market',(st.exp*100).toFixed(0)+'%')}</div>
+  <div class="panel"><div class="fig sm" id="eqFig"><svg></svg></div></div>
+  ${st.n<30?'<p class="warnbox" style="margin-top:14px">Fewer than 30 trades: too small a sample to judge this playbook on this pair.</p>':''}
+  <h3 style="margin-top:20px">Trades (latest 40)</h3><div class="scroll"><table><thead><tr><th>Entry bar</th><th>Playbook</th><th class="n">Entry</th><th class="n">Exit</th><th class="n">Bars</th><th class="n">R</th><th class="n">Equity %</th><th>Exit reason</th></tr></thead><tbody>${R.trades.slice(-40).reverse().map(t=>`<tr><td>${tstr(t.t0)}</td><td><span class="pill ${t.strat}">${t.strat} · ${t.setup}</span></td><td class="n">${fmtP(t.entry)}</td><td class="n">${fmtP(t.exit)}</td><td class="n">${t.bars}</td><td class="n" style="color:${t.R>0?'var(--tf)':'var(--mr)'}">${t.R.toFixed(2)}</td><td class="n">${pct(t.ret,2)}</td><td>${t.why}</td></tr>`).join('')||'<tr><td colspan="8"><div class="empty">No trades.</div></td></tr>'}</tbody></table></div>
+  <p class="note">Sizing risks ${cfg.risk}% of equity per trade, capped at 100% of equity (spot, no leverage). Fee ${cfg.fee}% and slippage ${cfg.slip}% per side.</p>`;
+  plot($('eqFig'),{kind:'eq',curve:R.curve})
+ }catch(e){$('bOut').innerHTML='<div class="empty">Backtest failed: '+(e.message||e.code||e)+'</div>'}finally{$('bRun').disabled=false}}
+function calc(){const eq=+$('rEq').value,rk=+$('rRisk').value/100,al=+$('rAlloc').value/100,en=+$('rEntry').value,sp=+$('rStop').value;
+ if(!(eq>0&&en>0&&sp>0&&sp<en)){$('rQty').textContent='—';$('rKv').innerHTML='';$('rNote').textContent='Stop must be below entry for a spot long.';return}
+ let qty=eq*rk/(en-sp),capped=false;if(qty*en>eq*al){qty=eq*al/en;capped=true}const d=en-sp,sym=$('rSym').value.replace('USDT','');
+ $('rQty').textContent=(qty>=100?qty.toFixed(1):qty.toPrecision(4))+' '+sym;
+ $('rKv').innerHTML=[['Position value',fmtP(qty*en)+' USDT'],['Share of equity',(qty*en/eq*100).toFixed(1)+'%'],['Loss at stop',fmtP(qty*d)+' USDT ('+(qty*d/eq*100).toFixed(2)+'%)'],['Stop distance',(d/en*100).toFixed(2)+'%'],['1R target',fmtP(en+d)],['2R target',fmtP(en+2*d)],['3R target',fmtP(en+3*d)]].map(([a,b])=>`<span>${a}</span><span>${b}</span>`).join('');
+ $('rNote').textContent=capped?`Capped by the ${al*100}% allocation limit, so actual risk is below ${rk*100}%.`:`Quantity = equity × risk ÷ (entry − stop). Round down to the pair's lot size on Binance.`}
+function renderRules(){const heat=S.results.filter(r=>r.sig).length*cfg.risk;
+ $('rRules').innerHTML=`<thead><tr><th>Rule</th><th class="n">Limit</th><th>Why</th></tr></thead><tbody>`+[['Risk per trade',cfg.risk+'%','One loss stays small; 10 losses in a row cost about '+(100-100*(1-cfg.risk/100)**10).toFixed(1)+'%'],['Max open positions',cfg.maxPos,'Crypto alts move together; more positions add little diversification'],['Max portfolio heat',cfg.maxHeat+'%','Sum of open risk to stops. Taking every current signal would be '+heat.toFixed(1)+'%'],['Daily loss stop','3%','Stop opening trades for the day after −3% realised'],['BTC daily risk-off','Trend longs '+(cfg.btcBlock?'blocked':'flagged'),'Alt breakouts fail more often when BTC is below its EMA 200'],['Execution','Manual','Signals and alerts only; no orders are sent from this app']].map(r=>`<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td style="white-space:normal">${r[2]}</td></tr>`).join('')+'</tbody>'}
+const alertText=a=>`[Tradesys Edge Dual] ${a.strat==='TF'?'TREND':'REVERSION'} ${a.setup} · ${a.sym} ${a.tf} · Entry ${fmtP(a.entry)} · Stop ${fmtP(a.stop)} · Target ${fmtP(a.target)} · R:R ${a.rr.toFixed(2)} · Score ${a.score}${a.note?' · '+a.note:''}${a.demo?' · DEMO':''}`;
+function renderAlerts(){$('aList').innerHTML=S.alerts.length?S.alerts.slice(0,60).map(a=>`<div class="alert"><span class="pill ${a.strat}">${a.strat}</span> ${alertText(a).replace('[Tradesys Edge Dual] ','')}<small>${tstr(a.at)}</small></div>`).join(''):'<div class="empty">No alerts yet.</div>';$('aAuto').value=String(cfg.auto)}
+function fillCfg(){for(const k in DEF){const el=$('k_'+k);if(!el)continue;if(el.type==='checkbox')el.checked=!!cfg[k];else el.value=cfg[k]}$('qtf').value=cfg.tf;$('sMode').value=cfg.mode;$('rEq').value=cfg.equity;$('rRisk').value=cfg.risk}
+function sizeFrom(sym){const r=S.results.find(x=>x.sym===sym);if(!r||!r.sig)return;$('rSym').value=sym;$('rEntry').value=+r.sig.entry.toPrecision(6);$('rStop').value=+r.sig.stop.toPrecision(6);calc();location.hash='risk'}
+
+/* ---------- routing & events ---------- */
+const VIEWS=['dashboard','scanner','chart','backtest','risk','alerts','config'];
+function route(){const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'dashboard';for(const x of VIEWS)$('v-'+x).classList.toggle('on',x===v);for(const a of document.querySelectorAll('nav a'))a.classList.toggle('on',a.dataset.v===v);
+ if(v==='chart'&&!figs.has($('cFig')))loadChart();for(const [el,d] of figs)drawChart(el,d)}
+window.addEventListener('hashchange',route);
+$('scanBtn').onclick=scan;
+$('qtf').onchange=e=>{cfg.tf=e.target.value;LS.set('cfg',cfg);scan()};
+$('sMode').onchange=e=>{cfg.mode=e.target.value;LS.set('cfg',cfg);scan()};
+$('sFilter').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.filter=b.dataset.f;for(const x of $('sFilter').children)x.classList.toggle('on',x===b);renderScanner()};
+$('sTable').onclick=e=>{const sz=e.target.closest('[data-size]');if(sz){sizeFrom(sz.dataset.size);return}const tr=e.target.closest('tr[data-sym]');if(tr){$('cSym').value=tr.dataset.sym;$('cTf').value=S.scanTf;location.hash='chart';loadChart()}};
+$('topList').onclick=e=>{const b=e.target.closest('[data-sym]');if(b)showDash(b.dataset.sym)};
+$('cLoad').onclick=loadChart;$('cSym').onkeydown=e=>{if(e.key==='Enter')loadChart()};
+$('bRun').onclick=runBt;
+for(const id of ['rEq','rRisk','rAlloc','rEntry','rStop','rSym'])$(id).oninput=calc;
+$('aCopy').onclick=async()=>{try{await navigator.clipboard.writeText(S.alerts.map(alertText).join('\n'));$('aCopy').textContent='Copied'}catch(e){$('aCopy').textContent='Copy blocked'}setTimeout(()=>$('aCopy').textContent='Copy all',1500)};
+$('aClear').onclick=()=>{S.alerts=[];LS.set('alerts',[]);renderAlerts()};
+$('aAuto').onchange=e=>{cfg.auto=+e.target.value;LS.set('cfg',cfg)};
+$('cfgForm').onsubmit=e=>{e.preventDefault();for(const k in DEF){const el=$('k_'+k);if(!el)continue;cfg[k]=el.type==='checkbox'?el.checked:typeof DEF[k]==='number'?(+el.value||DEF[k]):el.value}LS.set('cfg',cfg);S.cache={};figs.delete($('cFig'));$('cfgMsg').textContent='Saved.';fillCfg();calc();probeLive().then(scan)};
+$('cfgReset').onclick=()=>{cfg={...DEF};LS.set('cfg',cfg);fillCfg();$('cfgMsg').textContent='Defaults restored; save to rescan.'};
+setInterval(()=>{if(cfg.auto>0&&!S.busy&&Date.now()-S.lastScan>=cfg.auto*36e5)scan()},60000);
+
+$('aTest').onclick=async()=>{const b=$('aTest');try{await sendTg('[Tradesys Edge Dual] Test message · '+new Date().toLocaleString());b.textContent='Sent'}catch(e){b.textContent='Failed: '+e.message}setTimeout(()=>b.textContent='Send test to Telegram',3000)};
+fillCfg();calc();route();
+(async()=>{setStatus('Connecting to Binance…');await probeLive();S.cache={};figs.delete($('cFig'));await scan();if(location.hash==='#chart')loadChart()})();
+}
+</script>
+</body>
+</html>
