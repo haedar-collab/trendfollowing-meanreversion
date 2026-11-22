@@ -78,6 +78,42 @@ Filter BTC: jika BTC daily di bawah struktur EMA 200, sinyal trend diberi label 
 
 ---
 
+## Harga sekarang (live)
+
+- Harga terbaru diambil dari Binance setiap **15 detik** selama halaman terbuka (`/api/v3/ticker/price`).
+- Tampil di: KPI BTC, header chart dan **kotak biru di sumbu chart**, kartu Trading Plan, papan sinyal (kolom *Sekarang*), scanner, dan pesan Telegram.
+- Kartu plan menunjukkan **status entry** berdasarkan harga sekarang:
+  - *Di zona entry* / *Di atas entry, masih valid* (hijau)
+  - *Di bawah zona entry* / *Terlalu jauh, jangan kejar* (kuning)
+  - *Di bawah stop loss: plan batal* / *TP1 sudah tercapai: lewati* (merah)
+- Sinyal tetap dihitung dari **bar yang sudah close**. Harga live hanya untuk eksekusi dan monitoring.
+
+## Probabilitas & tingkat keyakinan
+
+Angka ini **dihitung dari data historis**, bukan tebakan:
+
+1. Untuk setiap pair bersinyal, aplikasi mengambil 2.000 bar di timeframe yang sama.
+2. Semua sinyal lampau dengan strategi yang sama disimulasikan memakai plan yang sama (entry di open berikutnya, SL, TP1, lalu stop pindah ke entry, kemudian TP2). Sinyal yang saling tumpang tindih tidak dihitung ganda.
+3. Hasilnya:
+   - **TP1 %**: persentase sinyal yang mencapai TP1 sebelum SL.
+   - **TP2 %**: persentase sinyal yang mencapai TP2.
+   - **SL duluan %**: persentase sinyal yang kena SL sebelum TP1.
+   - **n**: jumlah sampel.
+4. Kalau sampel di pair itu < 15, dipakai gabungan dari semua pair bersinyal dengan strategi yang sama (diberi keterangan).
+
+**Keyakinan** memakai batas bawah konservatif (Wilson 95%) dari peluang TP1:
+
+| Keyakinan | Syarat |
+|---|---|
+| Tinggi | batas bawah TP1 ≥ 50% |
+| Sedang | batas bawah TP1 ≥ 35% |
+| Rendah | di bawah itu |
+| Rendah (sampel sedikit) | n < 10 |
+
+Ini frekuensi masa lalu, **bukan jaminan**. Kondisi pasar bisa berubah.
+
+---
+
 ## Cara upload (GitHub Pages)
 
 1. Login ke GitHub, lalu **New repository**, misalnya `tradesys-dual`, set **Public**.
