@@ -11,15 +11,33 @@ Satu file `index.html` tanpa build, tanpa server, tanpa aplikasi berbayar. Data 
 
 | Tab | Isi |
 |---|---|
-| **Dashboard** | Regime BTC daily, jumlah sinyal trend/reversion, komposisi regime, chart setup terbaik, daftar top setup |
+| **Dashboard** | Ringkasan pasar (BTC, regime harian, jumlah sinyal, komposisi regime), chart dengan garis plan, **kartu Trading Plan** (Entry, SL, TP1–TP3, ukuran posisi, manajemen), papan sinyal |
 | **Scanner** | Scan watchlist atau semua pair USDT (top N berdasarkan volume), filter Signals / Trend / Reversion / All |
 | **Chart** | Candlestick + EMA 20/50/200 + Bollinger 20,2 + panel ADX, penanda sinyal historis, level entry/stop/target |
 | **Backtest** | Router (keduanya), Trend saja, atau Reversion saja, pada 1.000–3.000 bar, dengan fee dan slippage |
 | **Risk** | Kalkulator ukuran posisi (risk %, batas alokasi, target 1R/2R/3R) + aturan portofolio |
-| **Alerts** | Log sinyal baru, kirim ke Telegram, copy teks, auto-scan 1 jam / 4 jam |
+| **Alerts** | Log sinyal baru, **Kirim sinyal tes** dan **Kirim pesan tes** ke Telegram, salin semua, auto-scan 1 jam / 4 jam |
 | **Config** | Semua parameter strategi, risiko, biaya, endpoint Binance, Telegram |
 
-Timeframe scan: **1h, 4h, 1d**.
+Timeframe scan: **1h, 4h, 1d**. Bahasa: tombol **EN / ID** di header (pilihan tersimpan di browser, juga dipakai untuk pesan Telegram).
+
+---
+
+## Trading plan
+
+Setiap sinyal otomatis punya plan lengkap:
+
+| | Trend following | Mean reversion |
+|---|---|---|
+| **Entry** | Close bar sinyal; zona entry = entry − 0,25×ATR s/d entry | Sama |
+| **Stop loss** | Entry − 2×ATR (= 1R) | Entry − 1,5×ATR (= 1R) |
+| **TP1** | +1R · ambil 33% · stop digeser ke entry | Setengah jalan ke rata-rata · ambil 50% · stop ke entry |
+| **TP2** | +2R · ambil 33% | Rata-rata 20 bar (SMA 20) · tutup sisa |
+| **TP3** | Sisa 34% trailing 3×ATR dari high (referensi 3R) | — (keluar juga jika RSI 2 > 70 atau setelah 10 bar) |
+| **Ukuran posisi** | Modal × risiko % ÷ (entry − SL), dibatasi alokasi maks per posisi | Sama |
+| **Berlaku** | 2 bar; batal jika close di bawah SL; jangan kejar di atas entry + 0,5×ATR | Sama |
+
+Backtest memakai plan yang sama persis (scale-out di TP1/TP2, stop ke entry, trailing), jadi hasilnya mencerminkan cara plan dijalankan.
 
 ---
 
@@ -81,11 +99,30 @@ Untuk update, upload ulang `index.html` di repo yang sama, lalu refresh browser 
 2. Kirim pesan apa saja ke bot kamu, lalu buka
    `https://api.telegram.org/bot<TOKEN>/getUpdates` dan salin angka `"chat":{"id": ... }`. Itu **chat ID**. Untuk grup/channel, tambahkan bot ke grup dulu; ID grup diawali `-100`.
 3. Di aplikasi, buka **Config → Data and alerts**: isi token dan chat ID, centang **Send new live signals to Telegram**, lalu **Save and rescan**.
-4. Buka tab **Alerts → Send test to Telegram** untuk mengecek.
+4. Buka tab **Alert**:
+   - **Kirim pesan tes**: cek koneksi bot.
+   - **Kirim sinyal tes**: mengirim trading plan lengkap dari sinyal yang sedang dipilih (atau contoh dari BTC bila belum ada sinyal), diberi label *SINYAL TES*.
+5. Dari kartu Trading Plan di Dashboard, tombol **Kirim ke Telegram** mengirim plan pair yang sedang dipilih.
 
-Contoh format alert:
+Contoh pesan (Bahasa Indonesia):
 ```
-[Tradesys Edge Dual] TREND Breakout · SOLUSDT 4h · Entry 145.20 · Stop 139.80 · Target 156.00 · R:R 2.00 · Score 78
+🔵 TREND · BREAKOUT
+SOLUSDT · 4h · Skor 78/100
+
+Entry: 145.20 (zona 144.53 – 145.20)
+Stop loss: 139.80 (-3.7%)
+TP1: 150.60 (+3.7%) · ambil 33%
+TP2: 156.00 (+7.4%) · ambil 33%
+TP3: sisanya trailing 3×ATR (ref 161.40)
+R:R ke TP2: 2.00
+Jumlah: 18.52 SOL ≈ 2,500 USDT · risiko 100 USDT
+
+Plan
+1. Di TP1 ambil 1/3 dan geser stop ke harga entry.
+2. Di TP2 ambil 1/3 lagi.
+3. Sisa 1/3 trailing 3×ATR di bawah high; keluar jika close di bawah EMA 50.
+
+Berlaku 2 bar · batal jika close di bawah SL
 ```
 
 **Keamanan:** token hanya disimpan di localStorage browser kamu dan tidak ikut ter-upload ke GitHub. Jangan menulis token di dalam `index.html`, karena repo publik bisa dibaca siapa saja. Pakai bot khusus untuk alert.
